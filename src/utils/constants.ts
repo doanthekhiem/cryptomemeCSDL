@@ -10,12 +10,12 @@ export const SPIRAL_CONFIG = {
   tokensPerTurn: 12, // 6 inner + 6 outer
 } as const;
 
-// Character configuration
+// Character configuration - optimized for performance
 export const CHARACTER_CONFIG = {
-  particleCount: 2000,
-  particleSize: 0.03,
-  moveSpeed: 5,
-  rotationSpeed: 3,
+  particleCount: 500, // Reduced from 2000
+  particleSize: 0.05, // Larger particles to compensate
+  moveSpeed: 8, // Faster movement
+  rotationSpeed: 4, // Faster rotation
   height: 1.5,
   bodyColor: '#00fff5',
   glowColor: '#ff00ff',

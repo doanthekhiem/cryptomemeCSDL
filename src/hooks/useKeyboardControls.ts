@@ -3,7 +3,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGalleryStore } from '../stores/galleryStore';
 import { CHARACTER_CONFIG, SPIRAL_CONFIG } from '../utils/constants';
-import { constrainToSpiral } from '../utils/spiralGenerator';
 import { findNearestToken } from '../utils/tokenPositioning';
 
 interface KeyState {
@@ -105,16 +104,31 @@ export const useKeyboardControls = () => {
     };
   }, [nearestToken, selectToken, toggleMenu, toggleSearch, toggleLeaderboard]);
 
+  // Track total angle traveled on spiral (accumulated, not normalized)
+  // Initialized based on starting height
+  const totalAngle = useRef(-1); // -1 means uninitialized
+
   // Movement update in animation frame
   useFrame((_, delta) => {
     const { forward, backward, left, right } = keys.current;
     const isMoving = forward || backward || left || right;
     setIsMoving(isMoving);
 
+    // Initialize total angle from current position if needed
+    if (totalAngle.current < 0) {
+      // Calculate initial angle from starting position height
+      // height = (totalAngle / 2π) * heightPerTurn
+      // totalAngle = (height / heightPerTurn) * 2π
+      const startHeight = characterPosition.y - CHARACTER_CONFIG.height;
+      totalAngle.current = (startHeight / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2;
+    }
+
     if (!isMoving) return;
 
-    const moveSpeed = CHARACTER_CONFIG.moveSpeed * delta;
-    const rotSpeed = CHARACTER_CONFIG.rotationSpeed * delta;
+    // Clamp delta
+    const dt = Math.min(delta, 0.05);
+    const moveSpeed = CHARACTER_CONFIG.moveSpeed * dt;
+    const rotSpeed = CHARACTER_CONFIG.rotationSpeed * dt;
 
     // Rotation
     let newRotY = characterRotation.y;
@@ -126,36 +140,49 @@ export const useKeyboardControls = () => {
     if (forward) moveDir.z -= 1;
     if (backward) moveDir.z += 1;
 
-    if (moveDir.length() > 0) {
+    if (moveDir.lengthSq() > 0) {
       moveDir.normalize();
       moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), newRotY);
       moveDir.multiplyScalar(moveSpeed);
 
-      // Calculate new position
-      const newPos = characterPosition.clone().add(moveDir);
+      // New XZ position
+      const newPos = characterPosition.clone();
+      newPos.x += moveDir.x;
+      newPos.z += moveDir.z;
 
-      // Handle spiral height - character follows the ramp
-      const angle = Math.atan2(newPos.z, newPos.x);
-      const normalizedAngle = angle < 0 ? angle + Math.PI * 2 : angle;
+      // Constrain radius to ramp
+      const radius = Math.sqrt(newPos.x * newPos.x + newPos.z * newPos.z);
+      const minR = SPIRAL_CONFIG.innerRadius + 1.5;
+      const maxR = SPIRAL_CONFIG.outerRadius - 1.5;
+      const clampedRadius = Math.max(minR, Math.min(maxR, radius));
 
-      // Calculate which turn based on current height
-      const currentTurn = Math.floor(
-        characterPosition.y / SPIRAL_CONFIG.heightPerTurn
-      );
+      if (radius > 0.01) {
+        const scale = clampedRadius / radius;
+        newPos.x *= scale;
+        newPos.z *= scale;
+      }
 
-      // Calculate expected height for this angle on current turn
-      const heightInTurn =
-        (normalizedAngle / (Math.PI * 2)) * SPIRAL_CONFIG.heightPerTurn;
-      const expectedHeight = currentTurn * SPIRAL_CONFIG.heightPerTurn + heightInTurn;
+      // Calculate angle change
+      const newAngle = Math.atan2(newPos.z, newPos.x);
+      const prevAngle = Math.atan2(characterPosition.z, characterPosition.x);
 
-      // Smooth height transition
-      const heightDiff = expectedHeight - characterPosition.y;
-      newPos.y = characterPosition.y + heightDiff * 0.1;
+      // Handle wrap-around
+      let angleDiff = newAngle - prevAngle;
+      if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-      // Constrain to spiral bounds
-      const constrainedPos = constrainToSpiral(newPos);
+      // Update total angle
+      totalAngle.current += angleDiff;
 
-      setCharacterPosition(constrainedPos);
+      // Clamp to spiral bounds
+      const maxAngle = SPIRAL_CONFIG.totalTurns * Math.PI * 2;
+      totalAngle.current = Math.max(0, Math.min(maxAngle, totalAngle.current));
+
+      // Calculate height from total angle
+      const rampHeight = (totalAngle.current / (Math.PI * 2)) * SPIRAL_CONFIG.heightPerTurn;
+      newPos.y = rampHeight + CHARACTER_CONFIG.height;
+
+      setCharacterPosition(newPos);
     }
 
     // Update rotation
@@ -164,8 +191,10 @@ export const useKeyboardControls = () => {
     }
 
     // Update nearest token
-    const nearest = findNearestToken(characterPosition, tokenPositions, 5);
-    setNearestToken(nearest);
+    if (tokenPositions.length > 0) {
+      const nearest = findNearestToken(characterPosition, tokenPositions, 5);
+      setNearestToken(nearest);
+    }
   });
 };
 

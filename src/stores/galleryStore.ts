@@ -68,10 +68,13 @@ interface GalleryActions {
 }
 
 // Calculate start position at top of spiral
+// Character starts at angle=0 (positive X axis), top turn
 const getStartPosition = () => {
-  const topHeight = SPIRAL_CONFIG.totalTurns * SPIRAL_CONFIG.heightPerTurn;
+  const topTurn = SPIRAL_CONFIG.totalTurns - 1;
+  // At angle 0, height = topTurn * heightPerTurn + (0 / 2PI) * heightPerTurn = topTurn * heightPerTurn
+  const startHeight = topTurn * SPIRAL_CONFIG.heightPerTurn + 1.5; // Add character height offset
   const centerRadius = (SPIRAL_CONFIG.innerRadius + SPIRAL_CONFIG.outerRadius) / 2;
-  return new THREE.Vector3(centerRadius, topHeight + 1, 0);
+  return new THREE.Vector3(centerRadius, startHeight, 0);
 };
 
 const initialState: GalleryState = {
