@@ -2,3 +2,8 @@
 README.md
 PROMPT
 PROMPT/**
+.vscode/
+node_modules/
+dist/
+.env
+.env.local

@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    @apply bg-cyber-bg text-white;
+    overflow: hidden;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-cyber-primary;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neon-cyan/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neon-cyan/50;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .text-glow-cyan {
+    text-shadow: 0 0 10px theme('colors.neon-cyan'),
+                 0 0 20px theme('colors.neon-cyan'),
+                 0 0 30px theme('colors.neon-cyan');
+  }
+
+  .text-glow-magenta {
+    text-shadow: 0 0 10px theme('colors.neon-magenta'),
+                 0 0 20px theme('colors.neon-magenta'),
+                 0 0 30px theme('colors.neon-magenta');
+  }
+
+  .box-glow-cyan {
+    box-shadow: 0 0 10px theme('colors.neon-cyan / 50%'),
+                0 0 20px theme('colors.neon-cyan / 30%');
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
+/* Keyframes */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Canvas takes full viewport */
+canvas {
+  display: block;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+/* Remove default focus outline, add custom */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  @apply ring-2 ring-neon-cyan ring-offset-2 ring-offset-cyber-bg;
+}
+
+/* Prevent text selection on UI */
+.ui-element {
+  user-select: none;
+}

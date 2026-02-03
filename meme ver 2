@@ -1,0 +1,825 @@
+# Technical Specification: ThevertMenthe 3D Art Gallery
+
+## 1. Tổng Quan Dự Án
+
+### 1.1 Mô Tả
+Đây là một **Virtual Art Gallery** (phòng trưng bày nghệ thuật ảo) được xây dựng bằng Three.js, cho phép người dùng điều khiển một nhân vật 3D di chuyển trong không gian gallery để xem các tác phẩm nghệ thuật.
+
+### 1.2 Đặc Điểm Chính
+- **Perspective**: Third-person view (góc nhìn thứ 3) với camera theo sau nhân vật
+- **Art Style**: Monochrome/Grayscale với aesthetic tối giản
+- **Character**: Nhân vật dạng "fuzzy/particle" màu đen với hiệu ứng dissolve
+- **Environment**: Gallery room hình chữ nhật với mái vòm, cửa sổ trần
+- **Interaction**: Keyboard-based navigation + proximity-based artwork viewing
+
+---
+
+## 2. Kiến Trúc Hệ Thống
+
+### 2.1 Technology Stack
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    React Application                     │
+├─────────────────────────────────────────────────────────┤
+│  React Three Fiber (R3F) - React renderer cho Three.js  │
+├─────────────────────────────────────────────────────────┤
+│  @react-three/drei - Helper components                   │
+├─────────────────────────────────────────────────────────┤
+│  Three.js - 3D rendering engine                          │
+├─────────────────────────────────────────────────────────┤
+│  WebGL - Hardware-accelerated graphics                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 2.2 Cấu Trúc Thư Mục
+
+```
+src/
+├── components/
+│   ├── Scene/
+│   │   ├── Scene.tsx              # Main 3D scene wrapper
+│   │   ├── Gallery.tsx            # Gallery room geometry
+│   │   ├── Character.tsx          # Player character
+│   │   ├── Artwork.tsx            # Individual artwork component
+│   │   ├── ArtworkFrame.tsx       # Frame với picture
+│   │   ├── Lighting.tsx           # Scene lighting setup
+│   │   └── Camera.tsx             # Third-person camera
+│   │
+│   ├── UI/
+│   │   ├── HUD.tsx                # Heads-up display
+│   │   ├── ControlsGuide.tsx      # Control instructions
+│   │   ├── ArtworkDetails.tsx     # Artwork info panel
+│   │   └── Menu.tsx               # ESC menu
+│   │
+│   └── Effects/
+│       ├── Footprints.tsx         # Footprint trail effect
+│       ├── ParticleCharacter.tsx  # Character particle system
+│       └── PostProcessing.tsx     # Post-processing effects
+│
+├── hooks/
+│   ├── useKeyboardControls.ts     # Keyboard input handling
+│   ├── useCharacterMovement.ts    # Character physics/movement
+│   ├── useProximityDetection.ts   # Artwork proximity detection
+│   └── useCameraFollow.ts         # Camera follow logic
+│
+├── stores/
+│   ├── gameStore.ts               # Zustand state management
+│   └── artworkStore.ts            # Artwork data store
+│
+├── data/
+│   └── artworks.ts                # Artwork metadata
+│
+├── types/
+│   └── index.ts                   # TypeScript definitions
+│
+└── utils/
+    ├── constants.ts               # Configuration constants
+    └── helpers.ts                 # Utility functions
+```
+
+---
+
+## 3. Chi Tiết Kỹ Thuật Các Components
+
+### 3.1 Gallery Room Geometry
+
+```typescript
+// Gallery.tsx
+interface GalleryConfig {
+  width: number;      // ~30 units
+  depth: number;      // ~60 units  
+  height: number;     // ~15 units
+  wallThickness: number;
+  roofAngle: number;  // Góc mái vòm
+}
+
+// Cấu trúc geometry của phòng:
+const GalleryStructure = {
+  // 1. Floor - Mặt sàn
+  floor: {
+    geometry: 'PlaneGeometry',
+    material: 'MeshStandardMaterial',
+    color: '#f5f5f5', // Off-white
+    roughness: 0.8
+  },
+  
+  // 2. Walls - Tường hai bên
+  walls: {
+    geometry: 'BoxGeometry',
+    material: 'MeshStandardMaterial', 
+    color: '#e8e8e8', // Light gray
+    positions: ['left', 'right', 'back']
+  },
+  
+  // 3. Roof - Mái vòm với cửa sổ trần
+  roof: {
+    type: 'gabled', // Mái hình tam giác
+    skylights: true,
+    geometry: 'custom', // CSG hoặc merged geometries
+  },
+  
+  // 4. Railing - Thanh chắn dọc tường
+  railings: {
+    geometry: 'CylinderGeometry + BoxGeometry',
+    material: 'MeshBasicMaterial',
+    color: '#000000',
+    height: 1.2 // meters
+  },
+  
+  // 5. Hotspots - Vị trí đứng xem tranh
+  viewingSpots: {
+    geometry: 'RingGeometry',
+    material: 'MeshBasicMaterial',
+    color: '#333333',
+    opacity: 0.3
+  }
+};
+```
+
+### 3.2 Character System (Particle-based)
+
+```typescript
+// Character.tsx - Nhân vật dạng particle/fuzzy
+interface CharacterConfig {
+  particleCount: number;     // ~2000-5000 particles
+  particleSize: number;      // 0.02-0.05
+  bodyRadius: number;        // 0.5
+  headRadius: number;        // 0.3
+  color: '#000000';
+  movementSpeed: number;     // 3-5 units/sec
+  rotationSpeed: number;     // 2-4 rad/sec
+}
+
+// Particle System Implementation
+class FuzzyCharacter {
+  // Body parts với particle distribution
+  bodyParts: {
+    head: SphereDistribution,
+    torso: CylinderDistribution,
+    arms: CylinderDistribution[],
+    legs: CylinderDistribution[]
+  };
+  
+  // Animation states
+  animations: {
+    idle: ParticleAnimation,
+    walking: ParticleAnimation,
+    turning: ParticleAnimation
+  };
+}
+
+// Points Material cho particle effect
+const particleMaterial = new THREE.PointsMaterial({
+  size: 0.03,
+  color: 0x000000,
+  transparent: true,
+  opacity: 0.9,
+  sizeAttenuation: true
+});
+```
+
+### 3.3 Artwork Display System
+
+```typescript
+// Artwork.tsx
+interface Artwork {
+  id: string;
+  title: string;
+  artist: string;
+  year: number;
+  description: string;
+  imagePath: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  frameSize: { width: number; height: number };
+  interactionZone: number; // Bán kính vùng tương tác
+}
+
+// Frame Component
+const ArtworkFrame = ({ artwork }: { artwork: Artwork }) => {
+  return (
+    <group position={artwork.position} rotation={artwork.rotation}>
+      {/* Outer Frame - Khung ngoài */}
+      <mesh>
+        <boxGeometry args={[frameWidth + 0.2, frameHeight + 0.2, 0.1]} />
+        <meshStandardMaterial color="#1a1a1a" />
+      </mesh>
+      
+      {/* Inner Mat - Viền trắng bên trong */}
+      <mesh position={[0, 0, 0.02]}>
+        <planeGeometry args={[frameWidth, frameHeight]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+      
+      {/* Artwork Image */}
+      <mesh position={[0, 0, 0.03]}>
+        <planeGeometry args={[imageWidth, imageHeight]} />
+        <meshStandardMaterial map={texture} />
+      </mesh>
+    </group>
+  );
+};
+```
+
+### 3.4 Camera System (Third-Person Follow)
+
+```typescript
+// Camera.tsx
+interface CameraConfig {
+  offset: Vector3;           // [0, 3, 8] - Behind and above
+  lookAtOffset: Vector3;     // [0, 1, 0] - Look at character waist
+  smoothing: number;         // 0.1 - Lerp factor
+  minDistance: number;       // 5
+  maxDistance: number;       // 15
+  collisionEnabled: boolean; // Prevent camera through walls
+}
+
+// Implementation với useFrame hook
+const ThirdPersonCamera = () => {
+  const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const characterPosition = useCharacterStore(state => state.position);
+  const characterRotation = useCharacterStore(state => state.rotation);
+  
+  useFrame((state, delta) => {
+    if (!cameraRef.current) return;
+    
+    // Calculate desired camera position
+    const offset = new Vector3(0, 3, 8);
+    offset.applyQuaternion(new Quaternion().setFromEuler(
+      new Euler(0, characterRotation.y, 0)
+    ));
+    
+    const desiredPosition = characterPosition.clone().add(offset);
+    
+    // Smooth interpolation
+    cameraRef.current.position.lerp(desiredPosition, smoothing);
+    
+    // Look at character
+    const lookAtTarget = characterPosition.clone().add(new Vector3(0, 1, 0));
+    cameraRef.current.lookAt(lookAtTarget);
+  });
+  
+  return <PerspectiveCamera ref={cameraRef} makeDefault fov={60} />;
+};
+```
+
+### 3.5 Input Control System
+
+```typescript
+// useKeyboardControls.ts
+interface Controls {
+  forward: boolean;   // Arrow Up / W
+  backward: boolean;  // Arrow Down / S
+  left: boolean;      // Arrow Left / A
+  right: boolean;     // Arrow Right / D
+  interact: boolean;  // Enter
+  menu: boolean;      // Escape
+}
+
+// Movement Logic
+const useCharacterMovement = () => {
+  const controls = useKeyboardControls();
+  const [position, setPosition] = useState(new Vector3(0, 0, 0));
+  const [rotation, setRotation] = useState(new Euler(0, 0, 0));
+  
+  useFrame((state, delta) => {
+    const moveDirection = new Vector3();
+    
+    // Forward/Backward movement
+    if (controls.forward) moveDirection.z -= 1;
+    if (controls.backward) moveDirection.z += 1;
+    
+    // Rotation
+    if (controls.left) rotation.y += rotationSpeed * delta;
+    if (controls.right) rotation.y -= rotationSpeed * delta;
+    
+    // Apply movement in character's local space
+    moveDirection.applyEuler(rotation);
+    moveDirection.normalize().multiplyScalar(moveSpeed * delta);
+    
+    // Collision detection
+    const newPosition = position.clone().add(moveDirection);
+    if (!checkCollision(newPosition)) {
+      setPosition(newPosition);
+    }
+  });
+};
+```
+
+---
+
+## 4. Visual Effects
+
+### 4.1 Footprint Trail System
+
+```typescript
+// Footprints.tsx
+interface Footprint {
+  id: string;
+  position: Vector3;
+  rotation: number;
+  opacity: number;
+  timestamp: number;
+}
+
+const FootprintTrail = () => {
+  const [footprints, setFootprints] = useState<Footprint[]>([]);
+  const characterPosition = useCharacterStore(state => state.position);
+  const isMoving = useCharacterStore(state => state.isMoving);
+  
+  useFrame((state, delta) => {
+    // Add new footprint while moving
+    if (isMoving && shouldAddFootprint(lastFootprintTime)) {
+      addFootprint(characterPosition);
+    }
+    
+    // Fade out old footprints
+    setFootprints(prev => prev
+      .map(fp => ({ ...fp, opacity: fp.opacity - fadeSpeed * delta }))
+      .filter(fp => fp.opacity > 0)
+    );
+  });
+  
+  return (
+    <group>
+      {footprints.map(fp => (
+        <mesh key={fp.id} position={fp.position} rotation={[0, fp.rotation, 0]}>
+          <circleGeometry args={[0.15, 8]} />
+          <meshBasicMaterial 
+            color="#333333" 
+            transparent 
+            opacity={fp.opacity * 0.3} 
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+```
+
+### 4.2 Artwork Detail View (Special Effect)
+
+```typescript
+// Khi nhấn Enter gần artwork - hiệu ứng "explode" lines
+interface ArtworkDetailView {
+  // Chuyển từ gallery view sang detail view với hiệu ứng
+  transitionType: 'line-explosion'; // Như frame 34-36
+  
+  // Implementation
+  effect: {
+    // Tạo nhiều Line3D từ center của artwork ra ngoài
+    lineCount: 200,
+    lineLength: 'random(5, 15)',
+    animationDuration: 0.5,
+    easing: 'easeOutExpo'
+  };
+}
+
+const ArtworkDetailTransition = ({ artwork, isActive }) => {
+  const linesRef = useRef<THREE.Group>();
+  
+  useFrame((state, delta) => {
+    if (isActive && linesRef.current) {
+      // Animate lines radiating outward
+      linesRef.current.children.forEach((line, i) => {
+        const progress = Math.min(animationProgress, 1);
+        const scale = progress * maxScale;
+        line.scale.setScalar(scale);
+      });
+    }
+  });
+  
+  return (
+    <group ref={linesRef}>
+      {lines.map((line, i) => (
+        <line key={i}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              array={line.positions}
+              count={2}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <lineBasicMaterial color="#000000" />
+        </line>
+      ))}
+    </group>
+  );
+};
+```
+
+### 4.3 Lighting Setup
+
+```typescript
+// Lighting.tsx
+const GalleryLighting = () => {
+  return (
+    <>
+      {/* Ambient Light - Base lighting */}
+      <ambientLight intensity={0.6} color="#ffffff" />
+      
+      {/* Skylight - From roof windows */}
+      <directionalLight
+        position={[0, 20, 0]}
+        intensity={0.8}
+        color="#ffffff"
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+      />
+      
+      {/* Artwork Spotlights - Each artwork has dedicated light */}
+      {artworks.map(artwork => (
+        <spotLight
+          key={artwork.id}
+          position={getSpotlightPosition(artwork)}
+          target-position={artwork.position}
+          angle={Math.PI / 6}
+          penumbra={0.5}
+          intensity={0.5}
+          color="#ffffff"
+        />
+      ))}
+      
+      {/* Fill lights from sides */}
+      <pointLight position={[-15, 8, 0]} intensity={0.3} />
+      <pointLight position={[15, 8, 0]} intensity={0.3} />
+    </>
+  );
+};
+```
+
+---
+
+## 5. UI Components
+
+### 5.1 HUD (Heads-Up Display)
+
+```typescript
+// HUD.tsx - Overlay controls guide
+const HUD = () => {
+  return (
+    <div className="hud-container">
+      {/* Controls Guide - Bottom center */}
+      <div className="controls-guide">
+        <div className="control-group">
+          <span className="label">Move</span>
+          <div className="keys">
+            <Key>↑</Key>
+            <div className="key-row">
+              <Key>←</Key><Key>↓</Key><Key>→</Key>
+            </div>
+          </div>
+        </div>
+        
+        <div className="control-group">
+          <span className="label">Open/Close Menu</span>
+          <Key>ESC</Key>
+        </div>
+        
+        <div className="control-group">
+          <span className="label">See details</span>
+          <Key>↵</Key>
+        </div>
+      </div>
+      
+      {/* Menu Button - Top right */}
+      <button className="menu-button">MENU</button>
+    </div>
+  );
+};
+```
+
+### 5.2 Artist Info Panel
+
+```typescript
+// ArtistInfo.tsx - Panel hiển thị thông tin nghệ sĩ
+const ArtistInfoPanel = () => {
+  return (
+    <div className="artist-panel">
+      <h1 className="artist-name">ThevertMenthe</h1>
+      <span className="subtitle">d r a w i n g s</span>
+      
+      <div className="bio">
+        <p>
+          Thevertmenthe is an artist whose work embraces simplicity and
+          subtle emotion through the humble ballpoint pen. Using ink as
+          both medium and metaphor, his drawings explore quiet moments,
+          fleeting thoughts, and the poetry of everyday life.
+        </p>
+        <p>
+          While his minimalist compositions often evoke a sense of calm and
+          clarity, they also open the door to darker, more introspective
+          territories...
+        </p>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## 6. State Management (Zustand)
+
+```typescript
+// gameStore.ts
+import create from 'zustand';
+
+interface GameState {
+  // Character state
+  characterPosition: Vector3;
+  characterRotation: Euler;
+  isMoving: boolean;
+  
+  // Camera state
+  cameraMode: 'follow' | 'fixed' | 'detail';
+  
+  // Interaction state
+  nearbyArtwork: Artwork | null;
+  viewingArtwork: Artwork | null;
+  
+  // UI state
+  isMenuOpen: boolean;
+  showControls: boolean;
+  
+  // Actions
+  setCharacterPosition: (pos: Vector3) => void;
+  setCharacterRotation: (rot: Euler) => void;
+  setIsMoving: (moving: boolean) => void;
+  setNearbyArtwork: (artwork: Artwork | null) => void;
+  enterDetailView: (artwork: Artwork) => void;
+  exitDetailView: () => void;
+  toggleMenu: () => void;
+}
+
+export const useGameStore = create<GameState>((set) => ({
+  characterPosition: new Vector3(0, 0, 0),
+  characterRotation: new Euler(0, 0, 0),
+  isMoving: false,
+  cameraMode: 'follow',
+  nearbyArtwork: null,
+  viewingArtwork: null,
+  isMenuOpen: false,
+  showControls: true,
+  
+  setCharacterPosition: (pos) => set({ characterPosition: pos }),
+  setCharacterRotation: (rot) => set({ characterRotation: rot }),
+  setIsMoving: (moving) => set({ isMoving: moving }),
+  setNearbyArtwork: (artwork) => set({ nearbyArtwork: artwork }),
+  
+  enterDetailView: (artwork) => set({ 
+    viewingArtwork: artwork,
+    cameraMode: 'detail'
+  }),
+  
+  exitDetailView: () => set({
+    viewingArtwork: null,
+    cameraMode: 'follow'
+  }),
+  
+  toggleMenu: () => set((state) => ({ isMenuOpen: !state.isMenuOpen })),
+}));
+```
+
+---
+
+## 7. Proximity Detection System
+
+```typescript
+// useProximityDetection.ts
+const useProximityDetection = () => {
+  const characterPosition = useGameStore(state => state.characterPosition);
+  const artworks = useArtworkStore(state => state.artworks);
+  const setNearbyArtwork = useGameStore(state => state.setNearbyArtwork);
+  
+  useFrame(() => {
+    let nearestArtwork: Artwork | null = null;
+    let minDistance = Infinity;
+    
+    artworks.forEach(artwork => {
+      const distance = characterPosition.distanceTo(
+        new Vector3(...artwork.position)
+      );
+      
+      if (distance < artwork.interactionZone && distance < minDistance) {
+        minDistance = distance;
+        nearestArtwork = artwork;
+      }
+    });
+    
+    setNearbyArtwork(nearestArtwork);
+  });
+};
+
+// Viewing spots (ellipses on floor)
+const viewingSpots = artworks.map(artwork => ({
+  position: calculateViewingSpotPosition(artwork),
+  isOccupied: isCharacterNear(artwork)
+}));
+```
+
+---
+
+## 8. Complete React Component Structure
+
+```tsx
+// App.tsx
+const App = () => {
+  return (
+    <div className="app">
+      <Canvas shadows>
+        <Suspense fallback={<LoadingScreen />}>
+          <Scene />
+        </Suspense>
+      </Canvas>
+      <HUD />
+    </div>
+  );
+};
+
+// Scene.tsx
+const Scene = () => {
+  return (
+    <>
+      {/* Camera */}
+      <ThirdPersonCamera />
+      
+      {/* Environment */}
+      <GalleryRoom />
+      <GalleryLighting />
+      
+      {/* Artworks */}
+      <ArtworkCollection />
+      
+      {/* Character */}
+      <ParticleCharacter />
+      <FootprintTrail />
+      
+      {/* Interaction zones */}
+      <ViewingSpots />
+      
+      {/* Info panels */}
+      <ArtistInfoPanel />
+      
+      {/* Effects */}
+      <ArtworkDetailTransition />
+      
+      {/* Systems */}
+      <KeyboardController />
+      <ProximityDetector />
+    </>
+  );
+};
+```
+
+---
+
+## 9. Artwork Data Structure
+
+```typescript
+// data/artworks.ts
+export const artworks: Artwork[] = [
+  {
+    id: 'art-001',
+    title: 'Abstract Figure',
+    artist: 'ThevertMenthe',
+    year: 2023,
+    description: 'Ballpoint pen on paper',
+    imagePath: '/artworks/abstract-figure.jpg',
+    position: [-12, 4, -25],  // Left wall, back
+    rotation: [0, Math.PI / 2, 0],  // Facing right
+    frameSize: { width: 3, height: 4 },
+    interactionZone: 3
+  },
+  {
+    id: 'art-002', 
+    title: 'Bird on Hand',
+    artist: 'ThevertMenthe',
+    year: 2024,
+    description: 'Ballpoint pen on paper',
+    imagePath: '/artworks/bird-hand.jpg',
+    position: [-12, 4, -15],
+    rotation: [0, Math.PI / 2, 0],
+    frameSize: { width: 2.5, height: 3.5 },
+    interactionZone: 3
+  },
+  // ... more artworks
+  {
+    id: 'art-special',
+    title: 'Starry Night Interpretation',
+    artist: 'ThevertMenthe', 
+    year: 2024,
+    description: 'Ballpoint pen on paper',
+    imagePath: '/artworks/starry-night.jpg',
+    position: [12, 4, -10],  // Right wall
+    rotation: [0, -Math.PI / 2, 0],
+    frameSize: { width: 3.5, height: 4.5 },
+    interactionZone: 3,
+    hasSpecialEffect: true  // Line explosion effect
+  }
+];
+```
+
+---
+
+## 10. Performance Optimizations
+
+```typescript
+// Optimizations for smooth 60fps
+
+// 1. Instanced Meshes for particles
+const ParticleCharacter = () => {
+  const meshRef = useRef<THREE.InstancedMesh>();
+  const particleCount = 3000;
+  
+  return (
+    <instancedMesh ref={meshRef} args={[null, null, particleCount]}>
+      <sphereGeometry args={[0.02, 4, 4]} />
+      <meshBasicMaterial color="#000000" />
+    </instancedMesh>
+  );
+};
+
+// 2. Texture optimization
+const useOptimizedTextures = () => {
+  const textures = useLoader(TextureLoader, artworkPaths);
+  
+  useEffect(() => {
+    textures.forEach(texture => {
+      texture.minFilter = THREE.LinearMipMapLinearFilter;
+      texture.generateMipmaps = true;
+      texture.anisotropy = 16;
+    });
+  }, [textures]);
+};
+
+// 3. Level of Detail (LOD) for distant objects
+const ArtworkWithLOD = ({ artwork }) => {
+  return (
+    <LOD>
+      <mesh distance={0}>
+        {/* High detail */}
+        <planeGeometry args={[3, 4, 32, 32]} />
+      </mesh>
+      <mesh distance={10}>
+        {/* Low detail */}
+        <planeGeometry args={[3, 4, 1, 1]} />
+      </mesh>
+    </LOD>
+  );
+};
+
+// 4. Frustum culling (automatic in Three.js)
+// 5. Object pooling for footprints
+// 6. RequestAnimationFrame throttling for UI updates
+```
+
+---
+
+## 11. Dependencies (package.json)
+
+```json
+{
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@react-three/fiber": "^8.15.0",
+    "@react-three/drei": "^9.88.0",
+    "three": "^0.158.0",
+    "zustand": "^4.4.0",
+    "@types/three": "^0.158.0",
+    "typescript": "^5.2.0"
+  }
+}
+```
+
+---
+
+## 12. Key Implementation Notes
+
+### Movement Logic
+- Character uses **tank controls**: Left/Right rotate, Up/Down move forward/backward
+- Movement is relative to character's facing direction
+- Collision detection với walls và railings
+
+### Camera Behavior
+- Smooth following với lerp interpolation
+- Auto-adjust height khi nhìn artwork gần
+- Transition animation khi vào detail view
+
+### Interaction Flow
+1. User di chuyển đến gần artwork (viewing spot)
+2. UI hiển thị "See details [↵]"
+3. User nhấn Enter
+4. Camera zoom vào artwork
+5. (Với artwork đặc biệt) Hiệu ứng line explosion
+6. Hiển thị chi tiết artwork
+7. ESC hoặc di chuyển ra để quay lại
+
+### Visual Style
+- Monochrome palette: Trắng, xám, đen
+- Soft shadows từ skylight
+- Particle-based character tạo aesthetic độc đáo
+- Clean, minimal UI với typography đơn giản
