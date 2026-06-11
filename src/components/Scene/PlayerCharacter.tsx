@@ -27,7 +27,7 @@ export const PlayerCharacter = () => {
       let x, y, z;
 
       switch (segment) {
-        case 0: // Head
+        case 0: { // Head
           const headRadius = 0.25;
           const theta1 = Math.random() * Math.PI * 2;
           const phi1 = Math.acos(2 * Math.random() - 1);
@@ -35,7 +35,8 @@ export const PlayerCharacter = () => {
           y = 1.5 + headRadius * Math.cos(phi1);
           z = headRadius * Math.sin(phi1) * Math.sin(theta1);
           break;
-        case 1: // Body
+        }
+        case 1: { // Body
           const bodyRadius = 0.3;
           const bodyHeight = Math.random() * 0.8;
           const theta2 = Math.random() * Math.PI * 2;
@@ -43,6 +44,7 @@ export const PlayerCharacter = () => {
           y = 0.7 + bodyHeight;
           z = bodyRadius * Math.sin(theta2) * (1 - bodyHeight * 0.3);
           break;
+        }
         case 2: // Left arm/leg
           x = -0.3 + (Math.random() - 0.5) * 0.15;
           y = Math.random() * 1.2;

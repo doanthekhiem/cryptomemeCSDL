@@ -4,14 +4,31 @@ import * as THREE from 'three';
 import { useGalleryStore } from '../stores/galleryStore';
 import { CHARACTER_CONFIG, SPIRAL_CONFIG } from '../utils/constants';
 import { findNearestToken } from '../utils/tokenPositioning';
+import { joystickState } from '../utils/inputState';
 
 interface KeyState {
   forward: boolean;
   backward: boolean;
   left: boolean;
   right: boolean;
-  interact: boolean;
 }
+
+const isTypingTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  (target instanceof HTMLElement && target.isContentEditable);
+
+// True when a UI overlay should capture input instead of the 3D scene
+const isOverlayOpen = () => {
+  const s = useGalleryStore.getState();
+  return !!(
+    s.selectedToken ||
+    s.isMenuOpen ||
+    s.isSearchOpen ||
+    s.isListViewOpen ||
+    s.isLeaderboardOpen
+  );
+};
 
 export const useKeyboardControls = () => {
   const keys = useRef<KeyState>({
@@ -19,7 +36,6 @@ export const useKeyboardControls = () => {
     backward: false,
     left: false,
     right: false,
-    interact: false,
   });
 
   const characterPosition = useGalleryStore((s) => s.characterPosition);
@@ -29,15 +45,15 @@ export const useKeyboardControls = () => {
   const setIsMoving = useGalleryStore((s) => s.setIsMoving);
   const tokenPositions = useGalleryStore((s) => s.tokenPositions);
   const setNearestToken = useGalleryStore((s) => s.setNearestToken);
-  const selectToken = useGalleryStore((s) => s.selectToken);
-  const nearestToken = useGalleryStore((s) => s.nearestToken);
-  const toggleMenu = useGalleryStore((s) => s.toggleMenu);
-  const toggleSearch = useGalleryStore((s) => s.toggleSearch);
-  const toggleLeaderboard = useGalleryStore((s) => s.toggleLeaderboard);
 
-  // Keyboard event handlers
+  // Keyboard event handlers — read store via getState() to avoid stale closures
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Never react while the user is typing in an input (search, list filter)
+      if (isTypingTarget(e.target)) return;
+
+      const store = useGalleryStore.getState();
+
       switch (e.code) {
         case 'KeyW':
         case 'ArrowUp':
@@ -56,20 +72,29 @@ export const useKeyboardControls = () => {
           keys.current.right = true;
           break;
         case 'Enter':
-          if (nearestToken) {
-            selectToken(nearestToken.token);
+          if (!isOverlayOpen() && store.nearestToken) {
+            store.selectToken(store.nearestToken.token);
           }
           break;
         case 'Escape':
-          selectToken(null);
-          toggleMenu();
+          // Close the topmost overlay first; only open the menu if nothing was open
+          if (!store.closeTopOverlay()) {
+            store.setMenuOpen(true);
+          }
           break;
         case 'Slash':
           e.preventDefault();
-          toggleSearch();
+          if (!store.selectedToken) {
+            store.toggleSearch();
+          }
+          break;
+        case 'KeyM':
+          store.toggleMinimap();
           break;
         case 'KeyL':
-          toggleLeaderboard();
+          if (!store.selectedToken && !store.isSearchOpen) {
+            store.toggleLeaderboard();
+          }
           break;
       }
     };
@@ -102,7 +127,7 @@ export const useKeyboardControls = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [nearestToken, selectToken, toggleMenu, toggleSearch, toggleLeaderboard]);
+  }, []);
 
   // Track total angle traveled on spiral (accumulated, not normalized)
   // Initialized based on starting height
@@ -110,19 +135,35 @@ export const useKeyboardControls = () => {
 
   // Movement update in animation frame
   useFrame((_, delta) => {
-    const { forward, backward, left, right } = keys.current;
-    const isMoving = forward || backward || left || right;
-    setIsMoving(isMoving);
-
-    // Initialize total angle from current position if needed
-    if (totalAngle.current < 0) {
-      // Calculate initial angle from starting position height
-      // height = (totalAngle / 2π) * heightPerTurn
-      // totalAngle = (height / heightPerTurn) * 2π
-      const startHeight = characterPosition.y - CHARACTER_CONFIG.height;
-      totalAngle.current = (startHeight / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2;
+    // Initialize total angle from current position if needed.
+    // Also re-sync after teleport (height vs angle mismatch).
+    const startHeight = characterPosition.y - CHARACTER_CONFIG.height;
+    const expectedAngle = (startHeight / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2;
+    if (totalAngle.current < 0 || Math.abs(expectedAngle - totalAngle.current) > Math.PI) {
+      totalAngle.current = expectedAngle;
     }
 
+    // While an overlay is open, the character stands still
+    if (isOverlayOpen()) {
+      keys.current = { forward: false, backward: false, left: false, right: false };
+      setIsMoving(false);
+      return;
+    }
+
+    const { forward, backward, left, right } = keys.current;
+
+    // Combine digital (keyboard) and analog (touch joystick) input
+    const moveInput = Math.max(
+      -1,
+      Math.min(1, (forward ? 1 : 0) - (backward ? 1 : 0) + joystickState.y)
+    );
+    const turnInput = Math.max(
+      -1,
+      Math.min(1, (left ? 1 : 0) - (right ? 1 : 0) - joystickState.x)
+    );
+
+    const isMoving = Math.abs(moveInput) > 0.1 || Math.abs(turnInput) > 0.1;
+    setIsMoving(isMoving);
     if (!isMoving) return;
 
     // Clamp delta
@@ -131,17 +172,12 @@ export const useKeyboardControls = () => {
     const rotSpeed = CHARACTER_CONFIG.rotationSpeed * dt;
 
     // Rotation
-    let newRotY = characterRotation.y;
-    if (left) newRotY += rotSpeed;
-    if (right) newRotY -= rotSpeed;
+    const newRotY = characterRotation.y + turnInput * rotSpeed;
 
     // Movement direction
-    const moveDir = new THREE.Vector3(0, 0, 0);
-    if (forward) moveDir.z -= 1;
-    if (backward) moveDir.z += 1;
+    const moveDir = new THREE.Vector3(0, 0, -moveInput);
 
-    if (moveDir.lengthSq() > 0) {
-      moveDir.normalize();
+    if (moveDir.lengthSq() > 0.01) {
       moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), newRotY);
       moveDir.multiplyScalar(moveSpeed);
 

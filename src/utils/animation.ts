@@ -118,7 +118,7 @@ export function smoothDamp(
 
   velocity.sub(temp.clone().multiplyScalar(omega)).multiplyScalar(exp);
 
-  let output = targetClamped.clone().add(change.add(temp).multiplyScalar(exp));
+  const output = targetClamped.clone().add(change.add(temp).multiplyScalar(exp));
 
   // Prevent overshooting
   const origMinusCurrent = originalTo.clone().sub(current);
