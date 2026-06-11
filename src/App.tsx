@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import { Scene } from './components/Scene/Scene';
 import { HUD } from './components/UI/HUD';
 import { useGalleryStore, saveCharacterPosition } from './stores/galleryStore';
@@ -47,6 +48,9 @@ function App() {
 
         {/* UI Overlay */}
         <HUD />
+
+        {/* Vercel Analytics (page views; only sends data on Vercel deploys) */}
+        <Analytics />
       </div>
     </QueryClientProvider>
   );
