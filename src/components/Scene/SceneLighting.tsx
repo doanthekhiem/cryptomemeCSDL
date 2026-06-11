@@ -5,22 +5,33 @@ export const SceneLighting = () => {
 
   return (
     <>
-      {/* Strong ambient for base visibility (slightly raised to offset the
-          darker enclosed-museum look from the roof + nearer fog) */}
-      <ambientLight intensity={1.35} color="#ffffff" />
+      {/* Low cool ambient — just enough that nothing goes pitch black.
+          Contrast comes from the directional + hemisphere pair below;
+          a high flat ambient is what made every surface look like
+          unlit cardboard. */}
+      <ambientLight intensity={0.45} color="#bcc8f5" />
 
-      {/* Hemisphere light - cheap and effective */}
+      {/* Warm sky / cool ground: gallery halogen bounce from above,
+          deep blue floor bounce from below */}
       <hemisphereLight
-        intensity={0.8}
-        color="#ffffff"
-        groundColor="#1a1a3e"
+        intensity={0.85}
+        color="#ffe7c4"
+        groundColor="#141b38"
       />
 
-      {/* Single directional light - main light source */}
+      {/* Main key light, slightly warm — gives the curved walls a smooth
+          bright-to-dark sweep around each turn instead of one flat tone */}
       <directionalLight
         position={[10, topHeight, 10]}
-        intensity={1.5}
-        color="#ffffff"
+        intensity={1.7}
+        color="#fff1dd"
+      />
+      {/* Cool fill from the opposite side so the dark half of the cylinder
+          stays readable instead of dropping to black */}
+      <directionalLight
+        position={[-12, topHeight * 0.4, -8]}
+        intensity={0.5}
+        color="#7e9bff"
       />
 
       {/* Two accent lights only */}

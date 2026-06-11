@@ -101,6 +101,98 @@ export const getGridTexture = (size = 256): THREE.Texture => {
   return texture;
 };
 
+/** Museum wall panels: vertical light-wash gradient + panel seams + noise.
+ *  uv.y: 0 = floor, 1 = wall top (canvas y is flipped accordingly). */
+export const getWallPanelTexture = (size = 256): THREE.Texture => {
+  const key = `wallpanel:${size}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const [canvas, ctx] = createCanvas(size);
+
+  // Vertical gradient — brightest where the art hangs (≈60% up the wall),
+  // falling off toward floor and ceiling like a wall-washer light
+  const gradient = ctx.createLinearGradient(0, size, 0, 0);
+  gradient.addColorStop(0.0, '#323e63');
+  gradient.addColorStop(0.45, '#4d5e92');
+  gradient.addColorStop(0.62, '#5868a4');
+  gradient.addColorStop(1.0, '#2a3354');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  // Subtle plaster noise
+  const rand = seededRandom(99);
+  for (let i = 0; i < 700; i++) {
+    const shade = rand();
+    ctx.fillStyle =
+      shade > 0.5
+        ? `rgba(180,195,235,${0.02 + rand() * 0.04})`
+        : `rgba(8,10,24,${0.03 + rand() * 0.05})`;
+    ctx.fillRect(rand() * size, rand() * size, 1 + rand() * 2.5, 1 + rand() * 2.5);
+  }
+
+  // Panel seam on the tile edge + a faint mid seam
+  ctx.strokeStyle = 'rgba(6,8,20,0.55)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(1.5, 0);
+  ctx.lineTo(1.5, size);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(150,170,220,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(4.5, 0);
+  ctx.lineTo(4.5, size);
+  ctx.stroke();
+
+  const texture = toTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  cache.set(key, texture);
+  return texture;
+};
+
+/** Polished gallery floor: dark stone with speckle and faint tile joints. */
+export const getFloorTexture = (size = 256): THREE.Texture => {
+  const key = `floor:${size}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const [canvas, ctx] = createCanvas(size);
+  ctx.fillStyle = '#252e4e';
+  ctx.fillRect(0, 0, size, size);
+
+  // Stone speckle
+  const rand = seededRandom(1234);
+  for (let i = 0; i < 1400; i++) {
+    const bright = rand() > 0.45;
+    ctx.fillStyle = bright
+      ? `rgba(170,190,240,${0.03 + rand() * 0.07})`
+      : `rgba(5,8,20,${0.04 + rand() * 0.08})`;
+    const s = 0.5 + rand() * 2;
+    ctx.fillRect(rand() * size, rand() * size, s, s);
+  }
+
+  // Soft polished sheen sweeping across the tile
+  const sheen = ctx.createLinearGradient(0, 0, size, size);
+  sheen.addColorStop(0, 'rgba(190,205,250,0)');
+  sheen.addColorStop(0.5, 'rgba(190,205,250,0.07)');
+  sheen.addColorStop(1, 'rgba(190,205,250,0)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, 0, size, size);
+
+  // Tile joints
+  ctx.strokeStyle = 'rgba(8,10,26,0.5)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, size - 2, size - 2);
+
+  const texture = toTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  cache.set(key, texture);
+  return texture;
+};
+
 /** Cratered moon surface. */
 export const getMoonTexture = (size = 512): THREE.Texture => {
   const key = `moon:${size}`;

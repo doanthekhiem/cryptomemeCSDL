@@ -14,7 +14,11 @@ import {
   getRoofRange,
   getSkylightOpening,
 } from '../../utils/spiralGenerator';
-import { getGridTexture, getEmojiTexture } from '../../utils/proceduralTextures';
+import {
+  getEmojiTexture,
+  getFloorTexture,
+  getWallPanelTexture,
+} from '../../utils/proceduralTextures';
 import { useGalleryStore } from '../../stores/galleryStore';
 
 // Scrolling rainbow shader for the ramp edge bands (nyan-cat road).
@@ -62,9 +66,13 @@ const RAINBOW_FRAGMENT = /* glsl */ `
 const pseudoRandom = (i: number) =>
   ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
 
+// Candles form a continuous random-walk price chart wrapping the wall —
+// each candle's body spans from the previous close to the next, with a
+// slight upward bias (we ARE going to the moon). Random scattered candles
+// read as floating debris; a walk reads as an actual chart.
 const buildCandlesticks = () => {
   const { outerRadius, heightPerTurn, totalTurns } = SPIRAL_CONFIG;
-  const perTurn = 36; // one candle every 10°
+  const perTurn = 48; // one candle every 7.5°
   const total = perTurn * totalTurns;
   const openings = getWindowOpenings();
 
@@ -76,18 +84,30 @@ const buildCandlesticks = () => {
   const quaternion = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
 
+  const clamp01 = (v: number) => Math.min(0.92, Math.max(0.08, v));
+  let level = 0.4; // normalized price level within the chart band
+
   for (let i = 0; i < total; i++) {
     const angle = (i / perTurn) * Math.PI * 2;
-    // No candles floating inside window openings
+    const r1 = pseudoRandom(i);
+
+    // Advance the walk even when the candle itself is skipped, so the
+    // chart stays continuous across window openings
+    const next = clamp01(level + (r1 - 0.47) * 0.34);
+    const open = level;
+    level = next;
+
     if (openings.some((o) => angle > o.start - 0.06 && angle < o.end + 0.06)) {
       continue;
     }
-    const baseHeight = (angle / (Math.PI * 2)) * heightPerTurn;
-    const r1 = pseudoRandom(i);
-    const r2 = pseudoRandom(i + 1000);
 
-    const bodyHeight = 0.6 + r1 * 1.4;
-    const y = baseHeight + 1.2 + r2 * 1.2;
+    const baseHeight = (angle / (Math.PI * 2)) * heightPerTurn;
+    const bandBottom = baseHeight + 1.3;
+    const bandScale = 1.8; // chart band spans 1.3 → 3.1 above the ramp
+
+    const isUp = next >= open;
+    const bodyHeight = Math.max(Math.abs(next - open) * bandScale, 0.1);
+    const y = bandBottom + ((open + next) / 2) * bandScale;
     const x = Math.cos(angle) * (outerRadius - 0.12);
     const z = Math.sin(angle) * (outerRadius - 0.12);
 
@@ -98,12 +118,12 @@ const buildCandlesticks = () => {
       quaternion,
       new THREE.Vector3(1, bodyHeight, 1)
     );
-    (r1 > 0.5 ? green : red).push(matrix.clone());
+    (isUp ? green : red).push(matrix.clone());
 
     matrix.compose(
       new THREE.Vector3(x, y, z),
       quaternion,
-      new THREE.Vector3(1, bodyHeight + 0.8, 1)
+      new THREE.Vector3(1, bodyHeight + 0.35, 1)
     );
     wicks.push(matrix.clone());
   }
@@ -273,9 +293,9 @@ export const SpiralStructure = () => {
     []
   );
   const ceilingLightMaterial = useMemo(
-    // Kept below bloom's luminance threshold blow-out range — at glancing
-    // angles the strip fills a lot of screen
-    () => new THREE.MeshBasicMaterial({ color: '#cdbd96', side: THREE.DoubleSide }),
+    // Kept dim — at glancing angles the strip fills a lot of screen and
+    // anything brighter reads as a giant blown-out arc across the ceiling
+    () => new THREE.MeshBasicMaterial({ color: '#6e6549', side: THREE.DoubleSide }),
     []
   );
 
@@ -298,31 +318,71 @@ export const SpiralStructure = () => {
     rainbowMaterial.uniforms.uTime.value = timeRef.current;
   });
 
-  // Floor with a faint procedural grid (tiled along the spiral)
+  // Polished stone floor tiled along the spiral
   const rampMaterial = useMemo(() => {
-    const gridTexture = getGridTexture();
-    gridTexture.repeat.set(3, SPIRAL_CONFIG.segments / 6);
+    const floorTexture = getFloorTexture().clone();
+    floorTexture.needsUpdate = true;
+    floorTexture.repeat.set(4, 30); // uv.y spans totalTurns → ~3 m tiles
     return new THREE.MeshStandardMaterial({
-      map: gridTexture,
-      color: '#9fb4e8',
-      metalness: 0.4,
-      roughness: 0.5,
+      map: floorTexture,
+      color: '#c8d2ee',
+      metalness: 0.35,
+      roughness: 0.45,
       side: THREE.DoubleSide,
       emissive: COLORS.neonCyan,
-      emissiveIntensity: 0.04,
+      emissiveIntensity: 0.02,
     });
   }, []);
 
-  const wallMaterial = useMemo(
+  // Wall uv.x = 1 per turn; clone the panel texture per wall so each gets
+  // panels of roughly equal world width despite different circumferences
+  const makeWallMaterial = (panelsPerTurn: number) => {
+    const panelTexture = getWallPanelTexture().clone();
+    panelTexture.needsUpdate = true;
+    panelTexture.repeat.set(panelsPerTurn, 1);
+    return new THREE.MeshStandardMaterial({
+      map: panelTexture,
+      color: '#d3dcf4',
+      metalness: 0.15,
+      roughness: 0.75,
+      side: THREE.DoubleSide,
+      emissive: '#46538a',
+      emissiveIntensity: 0.07,
+    });
+  };
+  const innerWallMaterial = useMemo(() => makeWallMaterial(20), []);
+  const outerWallMaterial = useMemo(() => makeWallMaterial(48), []);
+
+  // Baseboard + LED skirting line hugging the foot of both walls — strong
+  // horizontal lines give the corridor scale and depth
+  const skirting = useMemo(() => {
+    const fullArc = SPIRAL_CONFIG.totalTurns * Math.PI * 2;
+    const rIn = SPIRAL_CONFIG.innerRadius + 0.05;
+    const rOut = SPIRAL_CONFIG.outerRadius - 0.05;
+    return {
+      boards: [
+        createWallBandGeometry(rIn, 0, fullArc, 0, 0.3),
+        createWallBandGeometry(rOut, 0, fullArc, 0, 0.3),
+      ],
+      leds: [
+        createWallBandGeometry(rIn, 0, fullArc, 0.3, 0.37),
+        createWallBandGeometry(rOut, 0, fullArc, 0.3, 0.37),
+      ],
+    };
+  }, []);
+  const baseboardMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#1e2d4a',
-        metalness: 0.3,
-        roughness: 0.6,
+        color: '#0c1124',
+        metalness: 0.5,
+        roughness: 0.4,
         side: THREE.DoubleSide,
-        emissive: COLORS.neonPurple,
-        emissiveIntensity: 0.02,
       }),
+    []
+  );
+  const ledMaterial = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({ color: '#1ec8c0', side: THREE.DoubleSide }),
     []
   );
 
@@ -331,18 +391,18 @@ export const SpiralStructure = () => {
     if (quality === 'low') return null;
 
     const { green, red, wicks } = buildCandlesticks();
-    const bodyGeometry = new THREE.BoxGeometry(0.34, 1, 0.07);
-    const wickGeometry = new THREE.BoxGeometry(0.05, 1, 0.05);
+    const bodyGeometry = new THREE.BoxGeometry(0.5, 1, 0.1);
+    const wickGeometry = new THREE.BoxGeometry(0.06, 1, 0.06);
 
     const greenMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.pumpGreen,
       emissive: COLORS.pumpGreen,
-      emissiveIntensity: 0.55,
+      emissiveIntensity: 0.85,
     });
     const redMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.dumpRed,
       emissive: COLORS.dumpRed,
-      emissiveIntensity: 0.55,
+      emissiveIntensity: 0.85,
     });
     const wickMaterial = new THREE.MeshBasicMaterial({
       color: '#cfd8ea',
@@ -370,7 +430,7 @@ export const SpiralStructure = () => {
       {/* Inner Wall */}
       <mesh
         geometry={innerWallGeometry}
-        material={wallMaterial}
+        material={innerWallMaterial}
         receiveShadow
         name="inner-wall"
       />
@@ -378,10 +438,18 @@ export const SpiralStructure = () => {
       {/* Outer Wall */}
       <mesh
         geometry={outerWallGeometry}
-        material={wallMaterial}
+        material={outerWallMaterial}
         receiveShadow
         name="outer-wall"
       />
+
+      {/* Baseboards + LED skirting along both walls */}
+      {skirting.boards.map((g, i) => (
+        <mesh key={`board-${i}`} geometry={g} material={baseboardMaterial} />
+      ))}
+      {skirting.leds.map((g, i) => (
+        <mesh key={`led-${i}`} geometry={g} material={ledMaterial} />
+      ))}
 
       {/* Rainbow road edge bands */}
       <mesh geometry={innerStripGeometry} material={rainbowMaterial} />
@@ -469,6 +537,15 @@ export const SpiralStructure = () => {
         />
       </mesh>
       <group position={[museum.caps.x, museum.caps.bottomY + 0.9, 0.02]}>
+        {/* Portal rings turn the dead-end wall into a destination */}
+        <mesh position={[0, -0.6, 0.03]}>
+          <torusGeometry args={[1.85, 0.045, 10, 64]} />
+          <meshBasicMaterial color={COLORS.neonCyan} />
+        </mesh>
+        <mesh position={[0, -0.6, 0.02]}>
+          <torusGeometry args={[2.1, 0.02, 8, 64]} />
+          <meshBasicMaterial color={COLORS.neonMagenta} transparent opacity={0.5} />
+        </mesh>
         <Text
           fontSize={0.7}
           color={COLORS.neonCyan}
@@ -499,6 +576,14 @@ export const SpiralStructure = () => {
         position={[museum.caps.x, museum.caps.topY + 0.9, -0.02]}
         rotation={[0, Math.PI, 0]}
       >
+        <mesh position={[0, -0.6, 0.03]}>
+          <torusGeometry args={[1.85, 0.045, 10, 64]} />
+          <meshBasicMaterial color={COLORS.neonGold} />
+        </mesh>
+        <mesh position={[0, -0.6, 0.02]}>
+          <torusGeometry args={[2.1, 0.02, 8, 64]} />
+          <meshBasicMaterial color="#ffae3d" transparent opacity={0.5} />
+        </mesh>
         <Text
           fontSize={0.7}
           color={COLORS.neonGold}

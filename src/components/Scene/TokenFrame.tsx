@@ -6,7 +6,7 @@ import { TokenPosition } from '../../types';
 import { COLORS } from '../../utils/constants';
 import { formatPrice, getTokenStatus } from '../../utils/formatters';
 import { useGalleryStore } from '../../stores/galleryStore';
-import { getEmojiTexture } from '../../utils/proceduralTextures';
+import { getEmojiTexture, getGlowTexture } from '../../utils/proceduralTextures';
 
 interface TokenFrameProps {
   tokenPosition: TokenPosition;
@@ -183,6 +183,20 @@ export const TokenFrame = ({ tokenPosition, isNearest, onClick }: TokenFrameProp
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
+      {/* Warm wall-wash behind the frame — always on, so the corridor reads
+          as a row of lit exhibits even from across the atrium */}
+      <mesh position={[0, 0.3, -0.18]}>
+        <planeGeometry args={[5.2, 5.2]} />
+        <meshBasicMaterial
+          map={getGlowTexture()}
+          color={isTop10 ? '#7a6224' : '#4d4430'}
+          transparent
+          opacity={0.9}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+
       {/* Frame background - single mesh */}
       <mesh position={[0, 0, -0.05]}>
         <boxGeometry args={[2.2, 3, 0.1]} />
@@ -192,6 +206,16 @@ export const TokenFrame = ({ tokenPosition, isNearest, onClick }: TokenFrameProp
           emissiveIntensity={glowIntensity}
           metalness={0.5}
           roughness={0.3}
+        />
+      </mesh>
+
+      {/* Exhibition light bar above the frame — cheap box, always visible */}
+      <mesh position={[0, 1.7, 0.1]}>
+        <boxGeometry args={[1.9, 0.08, 0.15]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive="#fff3dd"
+          emissiveIntensity={0.9}
         />
       </mesh>
 
@@ -235,19 +259,9 @@ export const TokenFrame = ({ tokenPosition, isNearest, onClick }: TokenFrameProp
         />
       </group>
 
-      {/* Close-range décor: exhibition light bar + hologram ring */}
+      {/* Close-range décor: hologram ring */}
       {showDetail && (
         <>
-          {/* Light bar above the frame (emissive only — no real light) */}
-          <mesh position={[0, 1.7, 0.1]}>
-            <boxGeometry args={[1.9, 0.08, 0.15]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              emissive="#ffffff"
-              emissiveIntensity={0.9}
-            />
-          </mesh>
-
           {/* Hologram ring slowly spinning around the token image */}
           <mesh ref={holoRingRef} position={[0, 0.5, 0.06]}>
             <torusGeometry args={[0.95, 0.015, 8, 48]} />

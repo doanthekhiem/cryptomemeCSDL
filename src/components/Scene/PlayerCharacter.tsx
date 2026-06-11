@@ -200,26 +200,46 @@ export const PlayerCharacter = () => {
     <>
       <group ref={rootRef}>
         <group ref={bodyRef}>
-          {/* Suit silhouette */}
+          {/* Opaque white space suit — the 0.18-opacity ghost capsule made
+              the character read as a floating orb, not a person */}
           <mesh position={[0, 0.9, 0]}>
             <capsuleGeometry args={[0.26, 0.6, 4, 12]} />
             <meshStandardMaterial
-              color={COLORS.neonCyan}
-              emissive={COLORS.neonCyan}
-              emissiveIntensity={0.25}
-              transparent
-              opacity={0.18}
-              depthWrite={false}
+              color="#e9edf6"
+              metalness={0.1}
+              roughness={0.5}
+              emissive="#aebadf"
+              emissiveIntensity={0.12}
             />
           </mesh>
 
-          {/* Energy core */}
-          <mesh ref={coreRef} position={[0, 1.0, 0]}>
-            <icosahedronGeometry args={[0.22, 1]} />
+          {/* Chest reactor — the pulsing energy core, now worn on the suit */}
+          <mesh ref={coreRef} position={[0, 1.05, 0.24]}>
+            <icosahedronGeometry args={[0.09, 1]} />
             <meshStandardMaterial
               color={COLORS.neonCyan}
               emissive={COLORS.neonCyan}
               emissiveIntensity={1.6}
+            />
+          </mesh>
+
+          {/* Life-support backpack */}
+          <mesh position={[0, 1.05, -0.26]}>
+            <boxGeometry args={[0.34, 0.46, 0.16]} />
+            <meshStandardMaterial
+              color="#c7cfdf"
+              metalness={0.3}
+              roughness={0.45}
+            />
+          </mesh>
+
+          {/* Boots stripe */}
+          <mesh position={[0, 0.42, 0]}>
+            <cylinderGeometry args={[0.265, 0.27, 0.14, 14]} />
+            <meshStandardMaterial
+              color={COLORS.neonCyan}
+              emissive={COLORS.neonCyan}
+              emissiveIntensity={0.5}
             />
           </mesh>
 
@@ -230,6 +250,18 @@ export const PlayerCharacter = () => {
               color="#ffe9c4"
               emissive="#ffd9a0"
               emissiveIntensity={0.7}
+            />
+          </mesh>
+
+          {/* Gold mirrored visor */}
+          <mesh position={[0, 1.7, 0.13]}>
+            <sphereGeometry args={[0.21, 16, 12, 0, Math.PI]} />
+            <meshStandardMaterial
+              color="#3a2c08"
+              metalness={0.9}
+              roughness={0.15}
+              emissive="#ffb52e"
+              emissiveIntensity={0.25}
             />
           </mesh>
 

@@ -72,10 +72,12 @@ const SceneContent = () => {
           fullscreen bloom passes are the single biggest GPU cost */}
       {quality === 'high' && (
         <EffectComposer>
+          {/* Threshold above mid-grays: only true neons bloom. At 0.1 every
+              lit wall hazed over and the whole scene went soft */}
           <Bloom
-            luminanceThreshold={0.1}
-            luminanceSmoothing={0.8}
-            intensity={0.6}
+            luminanceThreshold={0.4}
+            luminanceSmoothing={0.6}
+            intensity={0.7}
           />
           <Vignette eskil={false} offset={0.1} darkness={0.2} />
         </EffectComposer>

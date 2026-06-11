@@ -45,3 +45,16 @@ Thực hiện theo `docs/UIUX_IMPROVEMENT_PLAN.md`. Build pass (`tsc -b && vite 
 - Toàn bộ 5 phase trong `docs/UIUX_IMPROVEMENT_PLAN.md` đã hoàn thành ở mức frontend MVP.
 - Bundle JS ~1.26MB (three.js chiếm phần lớn) — có thể code-split nếu cần sau.
 - Lưu ý rate limit CoinGecko free tier: mỗi lần mở detail panel gọi thêm 1 request `/coins/{id}` (React Query cache 60s).
+
+## Art pass 2 — sửa "trông khá tệ" (đánh giá từ screenshot/video thực tế)
+Đánh giá từ `scennsot.png` + `video-record.mp4`: ánh sáng phẳng (ambient trắng 1.35 xóa hết tương phản), tường/sàn là mảng màu đơn sắc như blockout, nến chart trôi lơ lửng ngẫu nhiên, tường chắn ENTRANCE/SUMMIT trống trơn, nhân vật là quả cầu mờ.
+
+- **Ánh sáng có tương phản** (`SceneLighting.tsx`): ambient 1.35 trắng → 0.45 xanh lạnh; hemisphere ấm trên/lạnh dưới (#ffe7c4 / #141b38); thêm directional fill lạnh phía đối diện — tường cong giờ có dải sáng-tối thay vì một màu bẹt.
+- **Texture thủ tục cho tường & sàn** (`proceduralTextures.ts` + `SpiralStructure.tsx`): `getWallPanelTexture` (gradient wall-washer + khe panel + noise thạch cao, clone với repeat khác nhau cho tường trong/ngoài để panel ~2.5m đều nhau), `getFloorTexture` (đá tối lốm đốm + khe gạch + sheen) thay grid dev cũ.
+- **Len chân tường + LED skirting**: 2 dải `createWallBandGeometry` chạy suốt 6 vòng ở chân cả hai tường — đường ngang liên tục cho cảm giác tỉ lệ và chiều sâu hành lang.
+- **Nến chart thành biểu đồ thật**: random-walk liên tục (thân nến nối close trước → close sau, bias đi lên "to the moon"), walk vẫn tiến qua chỗ cửa sổ để chart liền mạch; nến to hơn (0.5) và emissive 0.85.
+- **Cổng ENTRANCE/SUMMIT**: thêm vòng portal neon đôi (cyan/magenta ở entrance, gold ở summit) — tường cụt thành điểm đến.
+- **Wall-wash bảo tàng** (`TokenFrame.tsx`): quầng sáng ấm additive sau mỗi khung tranh (vàng đậm hơn cho top-10), luôn hiển thị nên hành lang đọc thành dãy hiện vật được rọi đèn từ xa; thanh đèn rọi tranh chuyển từ LOD-gần sang luôn hiển thị.
+- **Nhân vật phi hành gia rõ hình** (`PlayerCharacter.tsx`): bỏ capsule opacity 0.18 (nhìn như quả cầu trôi) → suit trắng đục, visor vàng gương, balo life-support, vạch boots cyan; lõi năng lượng chuyển thành chest reactor nhỏ.
+- **Bloom bớt mờ ảo** (`Scene.tsx`): luminanceThreshold 0.1 → 0.4 (chỉ neon thật mới bloom — trước đó cả tường sáng cũng bị haze), dải đèn trần #cdbd96 → #6e6549 (hết vòng cung vàng lóa khổng lồ ở góc nhìn chéo).
+- Kiểm chứng bằng pw-driver headless (6 góc chụp: entrance, hành lang, giữa xoắn ốc, summit) — không lỗi console, build + lint sạch.
