@@ -15,7 +15,7 @@ import { PerformanceMonitor } from './PerformanceMonitor';
 import { KeyboardController } from '../../hooks/useKeyboardControls';
 import { useGalleryStore } from '../../stores/galleryStore';
 import { useMemeTokens } from '../../hooks/useMemeTokens';
-import { COLORS, CAMERA_CONFIG } from '../../utils/constants';
+import { COLORS, CAMERA_CONFIG, MUSEUM_CONFIG } from '../../utils/constants';
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -128,8 +128,13 @@ export const Scene = () => {
       }}
       style={{ background: COLORS.bgPrimary }}
     >
-      <color attach="background" args={['#0d1020']} />
-      <fog attach="fog" args={['#0d1020', 40, 150]} />
+      {/* Indoor fog: distant bends of the corridor fade out like a real
+          gallery hallway — and it hides any tiny geometry seam */}
+      <color attach="background" args={[MUSEUM_CONFIG.fogColor]} />
+      <fog
+        attach="fog"
+        args={[MUSEUM_CONFIG.fogColor, MUSEUM_CONFIG.fogNear, MUSEUM_CONFIG.fogFar]}
+      />
 
       <Suspense fallback={<LoadingFallback />}>
         <SceneContent />

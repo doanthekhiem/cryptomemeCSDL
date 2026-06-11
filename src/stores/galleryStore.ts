@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import * as THREE from 'three';
 import { MemeToken, TokenPosition } from '../types';
-import { SPIRAL_CONFIG } from '../utils/constants';
+import { CAMERA_CONFIG, SPIRAL_CONFIG } from '../utils/constants';
 import { calculateTokenPositions } from '../utils/tokenPositioning';
 
 interface GalleryState {
@@ -247,7 +247,8 @@ export const useGalleryStore = create<GalleryState & GalleryActions>()(
 
       // Camera
       setCameraMode: (mode) => set({ cameraMode: mode }),
-      setCameraZoom: (zoom) => set({ cameraZoom: Math.max(0.5, Math.min(2, zoom)) }),
+      setCameraZoom: (zoom) =>
+        set({ cameraZoom: Math.max(0.5, Math.min(CAMERA_CONFIG.maxZoom, zoom)) }),
 
       // UI toggles
       toggleMenu: () => set((s) => ({ isMenuOpen: !s.isMenuOpen })),

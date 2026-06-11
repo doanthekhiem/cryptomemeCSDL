@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGalleryStore } from '../../stores/galleryStore';
-import { CAMERA_CONFIG } from '../../utils/constants';
+import { CAMERA_CONFIG, SPIRAL_CONFIG } from '../../utils/constants';
 
 const BASE_FOV = CAMERA_CONFIG.fov;
 const MOVING_FOV = BASE_FOV + 6; // slight widening = sense of speed
@@ -51,6 +51,27 @@ export const ThirdPersonCamera = () => {
       const alpha = 1 - Math.exp(-stiffness * delta);
       camera.position.lerp(targetPosition.current, alpha);
     }
+
+    // Museum constraint: the corridor is an analytic cylinder, so keep the
+    // camera inside it with a radial + height clamp (no raycasts needed)
+    const margin = CAMERA_CONFIG.wallMargin;
+    const camRadius = Math.hypot(camera.position.x, camera.position.z);
+    const clampedRadius = THREE.MathUtils.clamp(
+      camRadius,
+      SPIRAL_CONFIG.innerRadius + margin,
+      SPIRAL_CONFIG.outerRadius - margin
+    );
+    if (clampedRadius !== camRadius && camRadius > 0.0001) {
+      const scale = clampedRadius / camRadius;
+      camera.position.x *= scale;
+      camera.position.z *= scale;
+    }
+    camera.position.y = THREE.MathUtils.clamp(
+      camera.position.y,
+      characterPosition.y + CAMERA_CONFIG.minAboveCharacter,
+      characterPosition.y + CAMERA_CONFIG.maxAboveCharacter
+    );
+
     camera.lookAt(targetLookAt.current);
 
     // FOV breathing: widen slightly while moving for a sense of speed

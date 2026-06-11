@@ -9,7 +9,7 @@ export const calculateTokenPositions = (tokens: MemeToken[]): TokenPosition[] =>
 
   const placements: TokenPosition[] = [];
   const tokensPerWall = tokensPerTurn / 2; // 6 per wall per turn
-  const frameHeight = 2; // Height of token frame center above ramp
+  const frameHeight = 2.1; // Frame center above ramp ≈ camera lookAt height
 
   tokens.forEach((token, index) => {
     const turnIndex = Math.floor(index / tokensPerTurn);
@@ -17,14 +17,17 @@ export const calculateTokenPositions = (tokens: MemeToken[]): TokenPosition[] =>
     const isInnerWall = positionInTurn < tokensPerWall;
     const wallPosition = positionInTurn % tokensPerWall;
 
-    // Calculate angle within the turn
-    const angleOffset = ((wallPosition + 0.5) / tokensPerWall) * Math.PI * 2;
+    // Museum rhythm: outer wall staggered half a step (+30°) from the inner
+    // wall, so walking one turn meets frames alternating left/right every
+    // ~30° instead of facing pairs
+    const stagger = isInnerWall ? 0 : Math.PI / tokensPerWall;
+    const angleOffset =
+      ((wallPosition + 0.5) / tokensPerWall) * Math.PI * 2 + stagger;
     const baseAngle = turnIndex * Math.PI * 2 + angleOffset;
 
-    // Height based on turn
-    const turnHeight = turnIndex * heightPerTurn;
-    const heightInTurn = (wallPosition / tokensPerWall) * heightPerTurn;
-    const height = turnHeight + heightInTurn + frameHeight;
+    // Height follows the ramp at the exact hanging angle, so every frame
+    // sits the same distance above the sloped floor
+    const height = (baseAngle / (Math.PI * 2)) * heightPerTurn + frameHeight;
 
     // Radius with offset from wall
     const wallOffset = 0.3;

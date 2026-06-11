@@ -127,7 +127,9 @@ export const AmbientEmoji = () => {
         const phases = new Float32Array(PER_EMOJI);
         for (let i = 0; i < PER_EMOJI; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const radius = 5 + Math.random() * 25;
+          // Spawn inside the corridor (r 9–19) — anything outside the walls
+          // is hidden now that the museum is fully enclosed
+          const radius = 9 + Math.random() * 10;
           positions[i * 3] = Math.cos(angle) * radius;
           positions[i * 3 + 1] = MIN_Y + Math.random() * (MAX_Y - MIN_Y);
           positions[i * 3 + 2] = Math.sin(angle) * radius;

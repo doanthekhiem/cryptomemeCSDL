@@ -5,8 +5,9 @@ export const SceneLighting = () => {
 
   return (
     <>
-      {/* Strong ambient for base visibility */}
-      <ambientLight intensity={1.2} color="#ffffff" />
+      {/* Strong ambient for base visibility (slightly raised to offset the
+          darker enclosed-museum look from the roof + nearer fog) */}
+      <ambientLight intensity={1.35} color="#ffffff" />
 
       {/* Hemisphere light - cheap and effective */}
       <hemisphereLight

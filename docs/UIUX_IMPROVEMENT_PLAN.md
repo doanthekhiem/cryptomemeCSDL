@@ -102,6 +102,10 @@
 
 **Ràng buộc (đã tuân thủ):** mọi hiệu ứng mới gate theo `effectiveQuality` (low = tắt trail/hạt/torus/nến/emoji ambient); chỉ dùng primitive + shader + canvas texture procedural, không thêm asset GLTF/dependency mới; chỉ emoji Unicode — không vẽ lại hình tượng meme có bản quyền.
 
+### Phase 7 — Góc nhìn "trong lòng bảo tàng" (✅ đã làm)
+
+Camera hiện cao hơn mép tường và lùi quá xa → thường xuyên nhìn vượt nóc/xuyên tường ra ngoài bối cảnh; tranh hai tường treo đối mặt từng cặp thay vì so le nhịp bảo tàng. Kế hoạch chi tiết (camera clamp, trần xoắn ốc, cửa sổ To-The-Moon, sắp xếp lại tranh): [MUSEUM_VIEW_PLAN.md](MUSEUM_VIEW_PLAN.md).
+
 ---
 
 Nguyên tắc: mỗi tính năng đủ 4 trạng thái loading/empty/error/success; không ship nút không hoạt động; neon chỉ dùng cho điểm nhấn.
