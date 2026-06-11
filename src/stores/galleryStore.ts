@@ -3,7 +3,10 @@ import { persist, subscribeWithSelector } from 'zustand/middleware';
 import * as THREE from 'three';
 import { MemeToken, TokenPosition } from '../types';
 import { CAMERA_CONFIG, SPIRAL_CONFIG } from '../utils/constants';
-import { calculateTokenPositions } from '../utils/tokenPositioning';
+import {
+  calculateTokenPositions,
+  FRAME_HANG_HEIGHT,
+} from '../utils/tokenPositioning';
 
 interface GalleryState {
   // Character
@@ -96,8 +99,8 @@ interface GalleryActions {
 // Character starts at angle=0 (positive X axis), top turn
 const getStartPosition = () => {
   const topTurn = SPIRAL_CONFIG.totalTurns - 1;
-  // At angle 0, height = topTurn * heightPerTurn + (0 / 2PI) * heightPerTurn = topTurn * heightPerTurn
-  const startHeight = topTurn * SPIRAL_CONFIG.heightPerTurn + 1.5; // Add character height offset
+  // At angle 0, ramp height = topTurn * heightPerTurn; y is the FEET height
+  const startHeight = topTurn * SPIRAL_CONFIG.heightPerTurn;
   const centerRadius = (SPIRAL_CONFIG.innerRadius + SPIRAL_CONFIG.outerRadius) / 2;
   return new THREE.Vector3(centerRadius, startHeight, 0);
 };
@@ -130,7 +133,18 @@ const loadSavedPosition = (): THREE.Vector3 | null => {
     ) {
       return null;
     }
-    return new THREE.Vector3(x, y, z);
+    // Snap y to the exact ramp height for this (x, z): picks the winding
+    // closest to the saved y, which also migrates positions saved under the
+    // old convention (y = ramp + 1.5, a 0.375-turn bias → still rounds true)
+    const frac = Math.atan2(z, x);
+    const expected = (y / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2;
+    const totalAngle =
+      frac + Math.PI * 2 * Math.round((expected - frac) / (Math.PI * 2));
+    const rampY = Math.max(
+      0,
+      (totalAngle / (Math.PI * 2)) * SPIRAL_CONFIG.heightPerTurn
+    );
+    return new THREE.Vector3(x, rampY, z);
   } catch {
     return null;
   }
@@ -208,6 +222,10 @@ export const useGalleryStore = create<GalleryState & GalleryActions>()(
         if (index >= 0 && tokenPositions[index]) {
           const tp = tokenPositions[index];
           const targetPos = new THREE.Vector3(...tp.position);
+          // Frame center → feet on the ramp below it (without this the
+          // character lands 2.1m in the air and the angle re-sync in the
+          // movement hook snaps it half a turn off)
+          targetPos.y -= FRAME_HANG_HEIGHT;
 
           // Calculate position to stand in front of token
           const offset = new THREE.Vector3(0, 0, 3);

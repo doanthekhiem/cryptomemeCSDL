@@ -137,8 +137,9 @@ export const useKeyboardControls = () => {
   useFrame((_, delta) => {
     // Initialize total angle from current position if needed.
     // Also re-sync after teleport (height vs angle mismatch).
-    const startHeight = characterPosition.y - CHARACTER_CONFIG.height;
-    const expectedAngle = (startHeight / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2;
+    // characterPosition.y IS the ramp height (feet convention).
+    const expectedAngle =
+      (characterPosition.y / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2;
     if (totalAngle.current < 0 || Math.abs(expectedAngle - totalAngle.current) > Math.PI) {
       totalAngle.current = expectedAngle;
     }
@@ -214,9 +215,8 @@ export const useKeyboardControls = () => {
       const maxAngle = SPIRAL_CONFIG.totalTurns * Math.PI * 2;
       totalAngle.current = Math.max(0, Math.min(maxAngle, totalAngle.current));
 
-      // Calculate height from total angle
-      const rampHeight = (totalAngle.current / (Math.PI * 2)) * SPIRAL_CONFIG.heightPerTurn;
-      newPos.y = rampHeight + CHARACTER_CONFIG.height;
+      // Calculate height from total angle — feet stand on the ramp
+      newPos.y = (totalAngle.current / (Math.PI * 2)) * SPIRAL_CONFIG.heightPerTurn;
 
       setCharacterPosition(newPos);
     }

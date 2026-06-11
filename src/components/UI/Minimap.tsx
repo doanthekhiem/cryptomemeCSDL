@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useGalleryStore } from '../../stores/galleryStore';
-import { SPIRAL_CONFIG, CHARACTER_CONFIG, COLORS } from '../../utils/constants';
+import { SPIRAL_CONFIG, COLORS } from '../../utils/constants';
 import { getTokenStatus } from '../../utils/formatters';
 
 // The 3D world is a helix (constant radius, increasing height), which is
@@ -78,9 +78,7 @@ const PlayerDot = () => {
     0,
     Math.min(
       MAX_ANGLE,
-      ((characterPosition.y - CHARACTER_CONFIG.height) / SPIRAL_CONFIG.heightPerTurn) *
-        Math.PI *
-        2
+      (characterPosition.y / SPIRAL_CONFIG.heightPerTurn) * Math.PI * 2
     )
   );
   const { x, y } = mapPoint(totalAngle);

@@ -37,6 +37,10 @@ export const MUSEUM_CONFIG = {
 } as const;
 
 // Character configuration - optimized for performance
+// NOTE: characterPosition.y is the FEET height — exactly the local ramp
+// height. `height` is only the visual body height (head ≈ feet + 1.5),
+// not an offset to add to positions; adding it is what made the avatar
+// hover 1.8m above the floor.
 export const CHARACTER_CONFIG = {
   particleCount: 500, // Reduced from 2000
   particleSize: 0.05, // Larger particles to compensate
@@ -48,10 +52,11 @@ export const CHARACTER_CONFIG = {
 } as const;
 
 // Camera configuration — a museum visitor's eye: low, close, looking at
-// the art (frame centers hang at ramp+2.1), never above the walls
+// the art (frame centers hang at ramp+2.1), never above the walls.
+// Offsets are relative to characterPosition = feet on the ramp.
 export const CAMERA_CONFIG = {
   offset: [0, 2.0, 5.0] as const,
-  lookAtOffset: [0, 1.7, 0] as const,
+  lookAtOffset: [0, 1.3, 0] as const, // ≈ the avatar's head
   smoothing: 0.08,
   fov: 60,
   near: 0.1,
@@ -59,8 +64,8 @@ export const CAMERA_CONFIG = {
   maxZoom: 1.3,
   // Hard constraints keeping the camera inside the gallery corridor
   wallMargin: 0.6, // min distance from either wall
-  minAboveCharacter: -0.2,
-  maxAboveCharacter: 2.0, // stays below the wall top at any ramp point
+  minAboveCharacter: 1.2, // never sinks into the (sloping) floor behind
+  maxAboveCharacter: 2.8, // stays below the wall top at any ramp point
 } as const;
 
 // Color palette

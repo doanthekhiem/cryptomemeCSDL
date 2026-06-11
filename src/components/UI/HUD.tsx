@@ -10,7 +10,7 @@ import { Leaderboard } from './Leaderboard';
 import { TouchControls } from './TouchControls';
 import { Minimap } from './Minimap';
 import { Onboarding } from './Onboarding';
-import { SPIRAL_CONFIG, CHARACTER_CONFIG } from '../../utils/constants';
+import { SPIRAL_CONFIG } from '../../utils/constants';
 
 // Current spiral level derived from character height (1 = bottom)
 const LocationIndicator = () => {
@@ -19,9 +19,7 @@ const LocationIndicator = () => {
       SPIRAL_CONFIG.totalTurns,
       Math.max(
         1,
-        Math.floor(
-          (s.characterPosition.y - CHARACTER_CONFIG.height) / SPIRAL_CONFIG.heightPerTurn
-        ) + 1
+        Math.floor(s.characterPosition.y / SPIRAL_CONFIG.heightPerTurn) + 1
       )
     )
   );

@@ -116,7 +116,9 @@ export const PlayerCharacter = () => {
         ? Math.sin((Math.PI * celebrateTime.current) / CELEBRATE_DURATION) * 0.55
         : 0;
 
-    body.position.y = bob + hop;
+    // Body meshes are modeled from +0.34 (capsule bottom) upward; pull the
+    // whole body down so the boots rest on the ramp (root.y = feet height)
+    body.position.y = -0.34 + bob + hop;
     body.rotation.z = lean.current;
     body.rotation.x = moveBlend.current * 0.06; // slight forward pitch while walking
 
@@ -181,7 +183,7 @@ export const PlayerCharacter = () => {
         trailEmitTimer.current = 0;
         const head = trailHead.current;
         posArr[head * 3] = characterPosition.x + (Math.random() - 0.5) * 0.15;
-        posArr[head * 3 + 1] = characterPosition.y - 0.5 + Math.random() * 0.3;
+        posArr[head * 3 + 1] = characterPosition.y + 0.1 + Math.random() * 0.3;
         posArr[head * 3 + 2] = characterPosition.z + (Math.random() - 0.5) * 0.15;
 
         const color = new THREE.Color().setHSL((t * 0.5) % 1, 0.9, 0.55);

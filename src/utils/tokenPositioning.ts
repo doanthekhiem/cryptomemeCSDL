@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { MemeToken, TokenPosition } from '../types';
 import { SPIRAL_CONFIG } from './constants';
 
+// Frame centers hang this far above the local ramp height
+export const FRAME_HANG_HEIGHT = 2.1;
+
 // Calculate 3D positions for all tokens on the spiral walls
 export const calculateTokenPositions = (tokens: MemeToken[]): TokenPosition[] => {
   const { innerRadius, outerRadius, heightPerTurn, tokensPerTurn } =
@@ -9,7 +12,7 @@ export const calculateTokenPositions = (tokens: MemeToken[]): TokenPosition[] =>
 
   const placements: TokenPosition[] = [];
   const tokensPerWall = tokensPerTurn / 2; // per wall per turn (9 at 18/turn)
-  const frameHeight = 2.1; // Frame center above ramp ≈ camera lookAt height
+  const frameHeight = FRAME_HANG_HEIGHT;
 
   tokens.forEach((token, index) => {
     const turnIndex = Math.floor(index / tokensPerTurn);
@@ -105,5 +108,10 @@ export const getTokenViewingPosition = (
   const offsetX = Math.sin(rotY) * viewDistance;
   const offsetZ = -Math.cos(rotY) * viewDistance;
 
-  return new THREE.Vector3(pos.x + offsetX, pos.y - 0.5, pos.z + offsetZ);
+  // Feet on the ramp: the frame hangs FRAME_HANG_HEIGHT above it
+  return new THREE.Vector3(
+    pos.x + offsetX,
+    pos.y - FRAME_HANG_HEIGHT,
+    pos.z + offsetZ
+  );
 };
