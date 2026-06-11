@@ -45,9 +45,14 @@ export const calculateTokenPositions = (tokens: MemeToken[]): TokenPosition[] =>
       Math.sin(baseAngle) * radius,
     ];
 
-    // Rotation - face towards the walkway
-    // Inner wall faces outward, outer wall faces inward
-    const rotationY = isInnerWall ? baseAngle + Math.PI : baseAngle;
+    // Rotation - face towards the walkway. Ry(θ) maps the plane normal +z
+    // to (sinθ, 0, cosθ), so facing the center (−r̂) needs θ = −(a + π/2)
+    // and facing outward (+r̂) needs θ = π/2 − a. The old `baseAngle`-based
+    // values only faced the walkway at a few lucky angles — elsewhere the
+    // frames turned sideways or showed their backs to the corridor.
+    const rotationY = isInnerWall
+      ? Math.PI / 2 - baseAngle
+      : -(baseAngle + Math.PI / 2);
     const rotation: [number, number, number] = [0, rotationY, 0];
 
     placements.push({
@@ -104,9 +109,11 @@ export const getTokenViewingPosition = (
   const viewDistance = 3;
 
   // Calculate offset based on rotation (face the token)
+  // Stand viewDistance in front of the frame, along its +z normal
+  // (Ry(rotY) maps +z to (sin rotY, 0, cos rotY))
   const rotY = tokenPosition.rotation[1];
   const offsetX = Math.sin(rotY) * viewDistance;
-  const offsetZ = -Math.cos(rotY) * viewDistance;
+  const offsetZ = Math.cos(rotY) * viewDistance;
 
   // Feet on the ramp: the frame hangs FRAME_HANG_HEIGHT above it
   return new THREE.Vector3(

@@ -269,8 +269,9 @@ export const TokenFrame = ({ tokenPosition, isNearest, onClick }: TokenFrameProp
         </mesh>
       )}
 
-      {/* Token image background */}
-      <mesh position={[0, 0.5, 0]}>
+      {/* Token image background — nudged off the mat board face (z=0)
+          to avoid z-fighting */}
+      <mesh position={[0, 0.5, 0.005]}>
         <planeGeometry args={[1.6, 1.6]} />
         <meshBasicMaterial color="#1a1a2e" />
       </mesh>
