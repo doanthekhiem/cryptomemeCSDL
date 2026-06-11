@@ -66,6 +66,10 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  .animate-stamp-in {
+    animation: stamp-in 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  }
 }
 
 /* Keyframes */
@@ -95,6 +99,30 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Rubber-stamp slam for the "TO THE MOON" badge */
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-12deg) scale(2.4);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-12deg) scale(1);
+  }
+}
+
+/* One-shot emoji confetti inside the token modal */
+@keyframes confetti-fall {
+  from {
+    opacity: 1;
+    transform: translateY(-10%) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(420px) rotate(300deg);
   }
 }
 

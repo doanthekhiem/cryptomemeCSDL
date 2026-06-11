@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGalleryStore } from '../../stores/galleryStore';
 import { useTokenDetail } from '../../hooks/useMemeTokens';
 import {
@@ -46,6 +46,9 @@ export const TokenDetailPanel = () => {
         className="relative bg-cyber-primary border border-neon-cyan/50 rounded-xl p-6 max-w-md w-full mx-4 max-h-[85vh] overflow-y-auto animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Meme moment: big pump gets a stamp + one confetti burst */}
+        {priceChange > 20 && <MoonCelebration key={token.id} />}
+
         {/* Watchlist + close buttons */}
         <div className="absolute top-4 right-4 flex items-center gap-1">
           <button
@@ -191,6 +194,59 @@ export const TokenDetailPanel = () => {
         </p>
       </div>
     </div>
+  );
+};
+
+// "🚀 TO THE MOON" stamp + a single emoji confetti burst, shown once per
+// modal open when the token is pumping >20% in 24h. Pure CSS, no re-renders.
+const CONFETTI_EMOJI = ['🚀', '💎', '🔥', '📈', '🌕'];
+
+const MoonCelebration = () => {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: 18 }, (_, i) => ({
+        emoji: CONFETTI_EMOJI[i % CONFETTI_EMOJI.length],
+        left: Math.random() * 100,
+        delay: Math.random() * 0.5,
+        duration: 1 + Math.random() * 0.8,
+        size: 14 + Math.random() * 12,
+      })),
+    []
+  );
+
+  return (
+    <>
+      {/* Stamp */}
+      <div
+        className="absolute top-14 right-6 z-10 px-3 py-1 border-4 border-neon-gold rounded-lg
+          text-neon-gold font-bold text-lg tracking-wider whitespace-nowrap
+          bg-cyber-bg/40 animate-stamp-in pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        🚀 TO THE MOON
+      </div>
+
+      {/* One-shot confetti */}
+      <div
+        className="absolute inset-x-0 top-0 h-0 pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        {pieces.map((p, i) => (
+          <span
+            key={i}
+            className="absolute"
+            style={{
+              left: `${p.left}%`,
+              fontSize: p.size,
+              animation: `confetti-fall ${p.duration}s ease-in ${p.delay}s forwards`,
+              opacity: 0,
+            }}
+          >
+            {p.emoji}
+          </span>
+        ))}
+      </div>
+    </>
   );
 };
 

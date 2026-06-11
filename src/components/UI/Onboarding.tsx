@@ -9,20 +9,20 @@ interface Step {
 
 const getSteps = (touch: boolean): Step[] => [
   {
-    title: 'Welcome to the Spiral Gallery 👋',
+    title: 'Anon, welcome to the spiral 🌀',
     body: touch
-      ? 'The top 100 meme tokens hang along a 3D spiral. Drag the joystick (bottom-left) to walk around.'
-      : 'The top 100 meme tokens hang along a 3D spiral. Use W A S D or the arrow keys to walk around.',
+      ? 'The top 100 meme coins climb this spiral all the way to the Moon. Drag the joystick (bottom-left) to start the ascent. WAGMI.'
+      : 'The top 100 meme coins climb this spiral all the way to the Moon. Use W A S D or the arrow keys to start the ascent. WAGMI.',
   },
   {
-    title: 'Get close to a token',
-    body: 'Walk up to any token frame — a live preview card with its price appears at the bottom of the screen.',
+    title: 'Inspect the artifacts 💎',
+    body: 'Walk up to any token frame — a live price card appears at the bottom. Green frame = pumping, red frame = rekt.',
   },
   {
-    title: 'Explore faster',
+    title: 'Degen toolkit 🚀',
     body: touch
-      ? 'Tap a token (or its preview card) for full details. Open the MENU for search, the token list and the minimap.'
-      : 'Press Enter for full details · "/" to search and teleport · M for the minimap · ESC for the menu.',
+      ? 'Tap a token (or its preview card) for full details. Open the MENU for search, the token list and the minimap. wen lambo? soon.'
+      : 'Enter for full details · "/" to search & teleport · M for the minimap · ESC for the menu. wen lambo? soon.',
   },
 ];
 

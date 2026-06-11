@@ -63,6 +63,45 @@
 
 > Phần còn lại của vision MemePedia (genealogy Neo4j, SSR/NextJS, account đồng bộ watchlist) thuộc kiến trúc backend trong `Design/ComponentView.md`, ngoài phạm vi frontend MVP này.
 
+### Phase 6 — Làm sống lại không gian 3D (art pass)
+
+**Chẩn đoán:** `SpiralStructure.tsx` chỉ có 4 mesh trơn (ramp + 2 tường + 1 cột), material màu phẳng không chi tiết; 100 `TokenFrame` giống hệt nhau không phân cấp; `PlayerCharacter` là 500 hạt tĩnh chỉ có animation "thở" scale ±2%; di chuyển không có bob/lean/trail, teleport nhảy cụt, camera FOV cố định. → Không gian không có nhịp điệu, nhân vật vô hồn, chuyển động không có cảm giác.
+
+> **Đã triển khai (2026-06-11)** theo định hướng nghệ thuật "To The Moon" trong [3D_SCENE_ISSUES.md](3D_SCENE_ISSUES.md) — các mục M1–M4 bao trùm và thay thế một phần concept gốc của 6.1/6.2.
+
+**6.1 Môi trường bảo tàng** (`SpiralStructure.tsx`, `MoonAndSky.tsx`, `DataColumn.tsx`)
+- [x] Dải neon 2 mép ramp → nâng cấp thành **rainbow road** (shader cầu vồng chạy theo tiến độ xoắn ốc, M1)
+- [x] Grid line mờ trên mặt ramp (canvas texture procedural) thay sàn trơn
+- [x] Cột trung tâm thành "data column": 3 vòng torus xoay chậm + dòng hạt bay lên (high only) + **ticker meme** quanh cột (HODL/WAGMI/giá thật top 3, M1)
+- [x] ~~Dầm neon mỗi 60°~~ → thay bằng **dãy nến chart xanh/đỏ** instanced trên tường ngoài (M1, high only)
+- [x] Nền trời: sphere gradient nebula tím→đen + **Mặt Trăng** phát sáng ở chân trời phía đỉnh + **Trái Đất** nhỏ phía dưới đáy (M1 — leo từ Earth tới Moon)
+
+**6.2 Bài trí hiện vật — token frame có phân cấp** (`TokenFrame.tsx`, `TokenGallery.tsx`)
+- [x] Bục đế mỗi frame + thanh đèn rọi emissive phía trên (đèn rọi chỉ render trong DETAIL_DISTANCE)
+- [x] Vòng hologram xoay chậm quanh ảnh token; ảnh float nhẹ
+- [x] Phân cấp top 10: frame to hơn 1.2×, viền neon-gold, đế 2 tầng, plaque "#rank"; **#1 đội vương miện 👑 + confetti** (M2)
+- [x] Hiệu ứng trạng thái: pump >10% = **rocket 🚀 + 🔥 bay vòng quanh frame**; dump <−10% = hạt đỏ rỉ xuống + emoji 📉/💀 nổi lên (M2, trong DETAIL_DISTANCE, hạt high only)
+- [x] Biển neon khu vực: token pump/dump mạnh nhất ngày được gắn biển "**PUMP ZONE**" / "**REKT ALLEY**" (M1)
+
+**6.3 Nhân vật mới** (`PlayerCharacter.tsx`)
+- [x] Redesign **astronaut degen**: energy core (icosahedron pulse) + helmet kính phi hành gia (M3) + 2 ring hologram xoay + quỹ đạo hạt (high only) — thay blob hạt tĩnh
+- [x] Walk cycle: bob theo nhịp bước, lean khi rẽ, hơi chúi người khi đi, ring xoay nhanh hơn khi di chuyển
+- [x] Xoay mượt bằng damp (snap khi teleport); đứng yên >10s hiện 💤; chạm token pump >10% thì nhảy ăn mừng (M3)
+
+**6.4 Hiệu ứng di chuyển** (`PlayerCharacter.tsx`, `ThirdPersonCamera.tsx`, `MovementEffects.tsx`, store)
+- [x] **Trail cầu vồng** kiểu nyan cat fade phía sau khi di chuyển (high only, M3)
+- [x] Camera động: FOV 60→66 khi đi, smoothing cứng khi đi / mềm khi đứng yên (frame-rate independent)
+- [x] Teleport effect: `teleportSignal` trong store → particle burst + flash tại điểm đến, camera snap thay vì lerp xuyên tường
+- [x] Hạt ambient = **emoji sprites** (🚀 💎 🐸 🐕 🔥 📈, canvas texture) trôi lơ lửng thay bụi thường (high only, M2)
+
+**M4 — Khoảnh khắc meme trong UI** (`LoadingScreen.tsx`, `TokenDetailPanel.tsx`, `Onboarding.tsx`)
+- [x] Loading caption xoay vòng: "Summoning doge…", "Mining copium…", "Asking wen lambo…"…
+- [x] Modal token pump >20%: stamp "🚀 TO THE MOON" + confetti emoji một nhịp
+- [x] Empty state "no memes? 🐸", error state "rekt — the API rugged us 💀" (giữ nguyên giải thích kỹ thuật + nút retry)
+- [x] Onboarding giọng degen: "Anon, welcome to the spiral. WAGMI."
+
+**Ràng buộc (đã tuân thủ):** mọi hiệu ứng mới gate theo `effectiveQuality` (low = tắt trail/hạt/torus/nến/emoji ambient); chỉ dùng primitive + shader + canvas texture procedural, không thêm asset GLTF/dependency mới; chỉ emoji Unicode — không vẽ lại hình tượng meme có bản quyền.
+
 ---
 
 Nguyên tắc: mỗi tính năng đủ 4 trạng thái loading/empty/error/success; không ship nút không hoạt động; neon chỉ dùng cho điểm nhấn.

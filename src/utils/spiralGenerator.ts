@@ -95,6 +95,50 @@ export const createSpiralRampGeometry = (): THREE.BufferGeometry => {
   return geometry;
 };
 
+// Create a thin strip following the spiral floor between two radii.
+// Used for the glowing "rainbow road" bands along the ramp edges.
+// UV.y runs 0→1 over the whole spiral so a shader can color by progress.
+export const createRampStripGeometry = (
+  radiusStart: number,
+  radiusEnd: number,
+  yOffset = 0.03
+): THREE.BufferGeometry => {
+  const { heightPerTurn, totalTurns, segments } = SPIRAL_CONFIG;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const uvs: number[] = [];
+  const normals: number[] = [];
+
+  const totalSegments = segments * totalTurns;
+
+  for (let i = 0; i <= totalSegments; i++) {
+    const t = i / totalSegments;
+    const angle = t * totalTurns * Math.PI * 2;
+    const height = t * totalTurns * heightPerTurn + yOffset;
+
+    vertices.push(
+      Math.cos(angle) * radiusStart, height, Math.sin(angle) * radiusStart,
+      Math.cos(angle) * radiusEnd, height, Math.sin(angle) * radiusEnd
+    );
+    uvs.push(0, t, 1, t);
+    normals.push(0, 1, 0, 0, 1, 0);
+
+    if (i < totalSegments) {
+      const base = i * 2;
+      indices.push(base, base + 2, base + 1);
+      indices.push(base + 1, base + 2, base + 3);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+
+  return geometry;
+};
+
 // Create inner wall geometry
 export const createInnerWallGeometry = (): THREE.BufferGeometry => {
   const { innerRadius, heightPerTurn, totalTurns, segments, wallHeight } = SPIRAL_CONFIG;

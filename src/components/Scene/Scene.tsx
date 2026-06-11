@@ -4,10 +4,13 @@ import { Stars } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 
 import { SpiralStructure } from './SpiralStructure';
+import { MoonAndSky } from './MoonAndSky';
+import { DataColumn } from './DataColumn';
 import { TokenGallery } from './TokenGallery';
 import { PlayerCharacter } from './PlayerCharacter';
 import { ThirdPersonCamera } from './ThirdPersonCamera';
 import { SceneLighting } from './SceneLighting';
+import { TeleportEffect, AmbientEmoji } from './MovementEffects';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { KeyboardController } from '../../hooks/useKeyboardControls';
 import { useGalleryStore } from '../../stores/galleryStore';
@@ -32,8 +35,10 @@ const SceneContent = () => {
       {/* Camera */}
       <ThirdPersonCamera />
 
-      {/* Environment */}
+      {/* Environment — the climb from Earth to the Moon */}
+      <MoonAndSky />
       <SpiralStructure />
+      <DataColumn />
       <Stars
         radius={100}
         depth={50}
@@ -52,6 +57,10 @@ const SceneContent = () => {
 
       {/* Character */}
       <PlayerCharacter />
+
+      {/* Movement / teleport effects + ambient meme particles */}
+      <TeleportEffect />
+      <AmbientEmoji />
 
       {/* Controls */}
       <KeyboardController />

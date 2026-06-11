@@ -10,6 +10,8 @@ interface GalleryState {
   characterPosition: THREE.Vector3;
   characterRotation: THREE.Euler;
   isMoving: boolean;
+  /** Bumped on every teleport so the scene can play a burst at the target */
+  teleportSignal: { position: [number, number, number]; seq: number } | null;
 
   // Camera
   cameraMode: 'follow' | 'detail' | 'overview';
@@ -147,6 +149,7 @@ const initialState: GalleryState = {
   characterPosition: loadSavedPosition() ?? getStartPosition(),
   characterRotation: new THREE.Euler(0, -Math.PI / 2, 0),
   isMoving: false,
+  teleportSignal: null,
 
   cameraMode: 'follow',
   cameraZoom: 1,
@@ -218,19 +221,28 @@ export const useGalleryStore = create<GalleryState & GalleryActions>()(
             tp.position[2] - targetPos.z
           );
 
-          set({
+          set((s) => ({
             characterPosition: targetPos,
             characterRotation: new THREE.Euler(0, lookRotY, 0),
             isSearchOpen: false,
-          });
+            teleportSignal: {
+              position: [targetPos.x, targetPos.y, targetPos.z],
+              seq: (s.teleportSignal?.seq ?? 0) + 1,
+            },
+          }));
         }
       },
 
       teleportToTop: () => {
-        set({
-          characterPosition: getStartPosition(),
+        const startPos = getStartPosition();
+        set((s) => ({
+          characterPosition: startPos,
           characterRotation: new THREE.Euler(0, -Math.PI / 2, 0),
-        });
+          teleportSignal: {
+            position: [startPos.x, startPos.y, startPos.z],
+            seq: (s.teleportSignal?.seq ?? 0) + 1,
+          },
+        }));
       },
 
       // Camera

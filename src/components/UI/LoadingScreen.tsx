@@ -1,4 +1,15 @@
+import { useEffect, useState } from 'react';
 import { useGalleryStore } from '../../stores/galleryStore';
+
+// Degen-flavored loading captions, rotated while waiting for CoinGecko
+const LOADING_CAPTIONS = [
+  'Summoning doge…',
+  'Mining copium…',
+  'Asking wen lambo…',
+  'Counting diamond hands…',
+  'Fueling the rocket…',
+  'Charting the path to the Moon…',
+];
 
 const Title = () => (
   <h1 className="text-3xl sm:text-4xl font-bold mb-8">
@@ -12,6 +23,16 @@ export const LoadingScreen = () => {
   const isLoading = useGalleryStore((s) => s.isLoading);
   const error = useGalleryStore((s) => s.error);
   const tokens = useGalleryStore((s) => s.tokens);
+  const [captionIndex, setCaptionIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const id = window.setInterval(
+      () => setCaptionIndex((i) => (i + 1) % LOADING_CAPTIONS.length),
+      1600
+    );
+    return () => window.clearInterval(id);
+  }, [isLoading]);
 
   const isEmpty = !isLoading && !error && tokens.length === 0;
 
@@ -27,23 +48,10 @@ export const LoadingScreen = () => {
         <Title />
 
         {error ? (
-          // Error state
+          // Error state — degen tone, but the real cause stays visible
           <div>
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-dump-red"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <p className="text-lg text-white mb-2">Couldn't load token data</p>
+            <div className="text-5xl mb-4" aria-hidden="true">💀</div>
+            <p className="text-lg text-white mb-2">rekt — the API rugged us</p>
             <p className="text-sm text-gray-300 mb-1">
               CoinGecko didn't respond — it may be rate-limited or your
               connection dropped. Please try again in a minute.
@@ -59,21 +67,8 @@ export const LoadingScreen = () => {
         ) : isEmpty ? (
           // Empty state — API answered but returned no tokens
           <div>
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-              />
-            </svg>
-            <p className="text-lg text-white mb-2">No tokens found</p>
+            <div className="text-5xl mb-4" aria-hidden="true">🐸</div>
+            <p className="text-lg text-white mb-2">no memes?</p>
             <p className="text-sm text-gray-300">
               The market data feed returned an empty list. This is usually
               temporary — try reloading.
@@ -95,8 +90,9 @@ export const LoadingScreen = () => {
               <div className="absolute inset-2 border-4 border-transparent border-t-neon-magenta rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
             </div>
 
+            {/* aria-live region already announces politely; captions rotate for fun */}
             <p className="text-gray-300 animate-pulse">
-              Loading meme tokens from CoinGecko…
+              {LOADING_CAPTIONS[captionIndex]}
             </p>
           </div>
         )}
