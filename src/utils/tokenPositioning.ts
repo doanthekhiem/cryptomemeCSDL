@@ -8,7 +8,7 @@ export const calculateTokenPositions = (tokens: MemeToken[]): TokenPosition[] =>
     SPIRAL_CONFIG;
 
   const placements: TokenPosition[] = [];
-  const tokensPerWall = tokensPerTurn / 2; // 6 per wall per turn
+  const tokensPerWall = tokensPerTurn / 2; // per wall per turn (9 at 18/turn)
   const frameHeight = 2.1; // Frame center above ramp ≈ camera lookAt height
 
   tokens.forEach((token, index) => {

@@ -4,6 +4,7 @@ import { Stars } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 
 import { SpiralStructure } from './SpiralStructure';
+import { CorridorProps } from './CorridorProps';
 import { MoonAndSky } from './MoonAndSky';
 import { DataColumn } from './DataColumn';
 import { TokenGallery } from './TokenGallery';
@@ -38,6 +39,7 @@ const SceneContent = () => {
       {/* Environment — the climb from Earth to the Moon */}
       <MoonAndSky />
       <SpiralStructure />
+      <CorridorProps />
       <DataColumn />
       <Stars
         radius={100}

@@ -70,8 +70,10 @@ export const MoonAndSky = () => {
       {/* The Moon — destination of the climb. Placed off-axis on the
           horizon (not straight overhead): the third-person camera pitches
           slightly down, so anything above ~13° elevation is never seen.
-          On the horizon it grows closer to eye level as the player climbs. */}
-      <group position={[90, TOTAL_HEIGHT + 8, -70]}>
+          Kept low and close enough that it actually shows through the
+          Moon-facing windows (same azimuth as moonWindowAngle ≈ atan2(-56, 72));
+          higher/farther and the windows frame nothing but empty sky. */}
+      <group position={[72, TOTAL_HEIGHT + 2, -56]}>
         <mesh ref={moonRef}>
           <sphereGeometry args={[12, 32, 24]} />
           <meshStandardMaterial

@@ -197,15 +197,34 @@ export const TokenFrame = ({ tokenPosition, isNearest, onClick }: TokenFrameProp
         />
       </mesh>
 
-      {/* Frame background - single mesh */}
-      <mesh position={[0, 0, -0.05]}>
-        <boxGeometry args={[2.2, 3, 0.1]} />
+      {/* Frame: dark mat board + thin status-colored border. Coloring the
+          whole 2.2×3 slab made every frame read as a bare glowing box from
+          any oblique angle — the status color belongs on the rim only */}
+      <mesh position={[0, 0, -0.09]}>
+        <boxGeometry args={[2.36, 3.16, 0.06]} />
         <meshStandardMaterial
           color={frameColor}
           emissive={frameColor}
           emissiveIntensity={glowIntensity}
           metalness={0.5}
           roughness={0.3}
+        />
+      </mesh>
+      {/* Back cover: seen from behind (over a wall top, or past the last
+          frame near the end caps) the border box is a full glowing slab —
+          cap it with a dark museum-grade backing board */}
+      <mesh position={[0, 0, -0.135]}>
+        <boxGeometry args={[2.4, 3.2, 0.03]} />
+        <meshStandardMaterial color="#101830" metalness={0.3} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0, -0.05]}>
+        <boxGeometry args={[2.2, 3, 0.1]} />
+        <meshStandardMaterial
+          color="#101830"
+          emissive={frameColor}
+          emissiveIntensity={0.04}
+          metalness={0.4}
+          roughness={0.55}
         />
       </mesh>
 
@@ -219,16 +238,23 @@ export const TokenFrame = ({ tokenPosition, isNearest, onClick }: TokenFrameProp
         />
       </mesh>
 
-      {/* Pedestal — every artifact gets a base; hall of fame gets two tiers */}
+      {/* Pedestal — every artifact gets a base; hall of fame gets two tiers.
+          Near-black stone: anything lighter shifts sage-green under the warm
+          hemisphere light and reads as a bare placeholder box */}
       <mesh position={[0, -1.7, 0.1]}>
         <boxGeometry args={[1.7, 0.8, 0.7]} />
         <meshStandardMaterial
-          color="#16213e"
-          metalness={0.5}
-          roughness={0.4}
+          color="#0d1326"
+          metalness={0.6}
+          roughness={0.35}
           emissive={isTop10 ? COLORS.neonGold : COLORS.neonCyan}
-          emissiveIntensity={0.08}
+          emissiveIntensity={0.05}
         />
+      </mesh>
+      {/* Pedestal cap — a thin lighter lip so the base still has a silhouette */}
+      <mesh position={[0, -1.34, 0.1]}>
+        <boxGeometry args={[1.8, 0.06, 0.8]} />
+        <meshStandardMaterial color="#2a3558" metalness={0.7} roughness={0.3} />
       </mesh>
       {isTop10 && (
         <mesh position={[0, -2.05, 0.1]}>

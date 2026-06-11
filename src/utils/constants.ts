@@ -11,16 +11,19 @@ export const SPIRAL_CONFIG = {
   totalTurns: 6,
   segments: 72, // segments per turn
   wallHeight: 4,
-  tokensPerTurn: 12, // 6 inner + 6 outer
+  // 9 inner + 9 outer. Must hold all fetched tokens within totalTurns:
+  // 18 × 6 = 108 slots ≥ 100 fetched — at 12/turn the overflow tokens
+  // were placed on phantom turns 7–8, floating above the roof
+  tokensPerTurn: 18,
 } as const;
 
 // Museum enclosure (Phase 7): roof over the top turn, windows aimed at the
 // Moon, a skylight at the summit, indoor fog as the safety net for seams
 export const MUSEUM_CONFIG = {
   // Outer-wall windows (glass between sill and top, relative to local ramp)
-  windowArc: 0.36, // ~20.6° opening
-  windowSill: 1.1,
-  windowTop: 3.4,
+  windowArc: 0.46, // ~26.4° opening
+  windowSill: 1.0,
+  windowTop: 3.7,
   moonWindowAngle: Math.atan2(-70, 90) + Math.PI * 2, // ≈5.62 rad — faces the Moon, one per turn
   earthWindowAngle: Math.atan2(60, -65), // ≈2.40 rad — faces Earth, turn 0 only
   // Skylight cut into the roof right before the summit

@@ -208,23 +208,37 @@ export const SpiralStructure = () => {
       ),
     ];
 
-    // Gallery light strip running under every ceiling (the ceiling of turn k
+    // Gallery cove light running under every ceiling (the ceiling of turn k
     // is the floor of turn k+1, ending at the roof). Stops at the skylight.
+    // The helix geometry puts far stretches of this strip at eye level, so
+    // a bare band reads as a giant plank crossing the view — fascia boards
+    // on both edges hide it at glancing angles (real cove lighting): the
+    // bright strip is only exposed when standing nearly underneath it.
+    const ceilingStripEnd = totalTurns * Math.PI * 2 - MUSEUM_CONFIG.skylightArc;
     const ceilingStripGeometry = createSpiralBandGeometry(
-      13.8, 14.2,
+      13.94, 14.06,
       heightPerTurn - 0.05,
       0,
-      totalTurns * Math.PI * 2 - MUSEUM_CONFIG.skylightArc
+      ceilingStripEnd
     );
+    const ceilingFasciaGeometries = [
+      createWallBandGeometry(13.94, 0, ceilingStripEnd, heightPerTurn - 0.32, heightPerTurn - 0.03),
+      createWallBandGeometry(14.06, 0, ceilingStripEnd, heightPerTurn - 0.32, heightPerTurn - 0.03),
+    ];
 
-    // Windows on the outer wall: glass pane + neon frame per opening.
+    // Windows on the outer wall: glass pane + frame + mullions per opening.
+    // Without mullions the opening reads as an empty picture frame; the
+    // cross bars are what make it read as a window onto space.
     // The last opening in the list is the Earth window (turn 0).
     const windows = getWindowOpenings().map((o, i, all) => {
       const isEarth = i === all.length - 1;
       const { windowSill: sill, windowTop: top } = MUSEUM_CONFIG;
       const r = outerRadius - 0.08;
       const rFrame = outerRadius - 0.14;
-      const post = 0.025;
+      const post = 0.012;
+      const midY = (sill + top) / 2;
+      const third = (o.end - o.start) / 3;
+      const mullion = 0.006;
       return {
         isEarth,
         glass: createWallBandGeometry(r, o.start, o.end, sill, top),
@@ -233,6 +247,11 @@ export const SpiralStructure = () => {
           createWallBandGeometry(rFrame, o.start, o.end, top - 0.04, top + 0.1),
           createWallBandGeometry(rFrame, o.start - post, o.start + post, sill - 0.1, top + 0.1),
           createWallBandGeometry(rFrame, o.end - post, o.end + post, sill - 0.1, top + 0.1),
+        ],
+        mullions: [
+          createWallBandGeometry(rFrame, o.start, o.end, midY - 0.02, midY + 0.02),
+          createWallBandGeometry(rFrame, o.start + third - mullion, o.start + third + mullion, sill, top),
+          createWallBandGeometry(rFrame, o.start + 2 * third - mullion, o.start + 2 * third + mullion, sill, top),
         ],
       };
     });
@@ -254,6 +273,7 @@ export const SpiralStructure = () => {
       skylightGlassGeometry,
       skylightRimGeometries,
       ceilingStripGeometry,
+      ceilingFasciaGeometries,
       windows,
       caps,
     };
@@ -275,27 +295,45 @@ export const SpiralStructure = () => {
   const glassMaterial = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
-        color: '#9fd8ff',
+        color: '#7fb8e8',
         transparent: true,
-        opacity: 0.1,
+        opacity: 0.22,
         side: THREE.DoubleSide,
         depthWrite: false,
       }),
     []
   );
 
+  // Window frames: brushed metal with a soft glow instead of flat unlit
+  // neon — a solid-color MeshBasicMaterial frame reads as a billboard
   const goldFrameMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: COLORS.neonGold, side: THREE.DoubleSide }),
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#8a6f1d',
+        metalness: 0.85,
+        roughness: 0.3,
+        emissive: COLORS.neonGold,
+        emissiveIntensity: 0.4,
+        side: THREE.DoubleSide,
+      }),
     []
   );
   const cyanFrameMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: COLORS.neonCyan, side: THREE.DoubleSide }),
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#1d6a66',
+        metalness: 0.85,
+        roughness: 0.3,
+        emissive: COLORS.neonCyan,
+        emissiveIntensity: 0.25,
+        side: THREE.DoubleSide,
+      }),
     []
   );
   const ceilingLightMaterial = useMemo(
-    // Kept dim — at glancing angles the strip fills a lot of screen and
-    // anything brighter reads as a giant blown-out arc across the ceiling
-    () => new THREE.MeshBasicMaterial({ color: '#6e6549', side: THREE.DoubleSide }),
+    // Warm cove light. Can afford to be bright: the fascia boards hide it
+    // at glancing angles, so it never fills the screen as a solid band
+    () => new THREE.MeshBasicMaterial({ color: '#d8cba8', side: THREE.DoubleSide }),
     []
   );
 
@@ -330,7 +368,7 @@ export const SpiralStructure = () => {
       roughness: 0.45,
       side: THREE.DoubleSide,
       emissive: COLORS.neonCyan,
-      emissiveIntensity: 0.02,
+      emissiveIntensity: 0.04,
     });
   }, []);
 
@@ -464,8 +502,11 @@ export const SpiralStructure = () => {
         <mesh key={`skyrim-${i}`} geometry={g} material={goldFrameMaterial} />
       ))}
 
-      {/* Gallery light strip under every ceiling */}
+      {/* Cove light under every ceiling, recessed behind fascia boards */}
       <mesh geometry={museum.ceilingStripGeometry} material={ceilingLightMaterial} />
+      {museum.ceilingFasciaGeometries.map((g, i) => (
+        <mesh key={`fascia-${i}`} geometry={g} material={roofMaterial} />
+      ))}
 
       {/* Central atrium caps: the inner wall is a helix, so its downhill
           stretches sit below eye level and the r<8 atrium is visible from
@@ -509,13 +550,20 @@ export const SpiralStructure = () => {
         />
       </mesh>
 
-      {/* Windows: frosted glass + neon frames (gold = Moon, cyan = Earth) */}
+      {/* Windows: glass + metal frames + mullions (gold = Moon, cyan = Earth) */}
       {museum.windows.map((w, i) => (
         <group key={`window-${i}`}>
           <mesh geometry={w.glass} material={glassMaterial} />
           {w.frame.map((g, j) => (
             <mesh
               key={j}
+              geometry={g}
+              material={w.isEarth ? cyanFrameMaterial : goldFrameMaterial}
+            />
+          ))}
+          {w.mullions.map((g, j) => (
+            <mesh
+              key={`m-${j}`}
               geometry={g}
               material={w.isEarth ? cyanFrameMaterial : goldFrameMaterial}
             />
